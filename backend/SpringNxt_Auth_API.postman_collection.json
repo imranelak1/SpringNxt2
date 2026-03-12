@@ -1,0 +1,515 @@
+{
+	"info": {
+		"_postman_id": "springnxt-auth-collection",
+		"name": "SpringNxt Auth API",
+		"description": "Complete authentication API collection for SpringNxt backend:\n- JWT Auth (register, login, verify email, forgot/reset password)\n- Role-based access test endpoints\n- OAuth2 flows",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Auth",
+			"item": [
+				{
+					"name": "1.1 Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response contains message', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include('Registration successful');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Imrane\",\n    \"lastName\": \"Elak\",\n    \"email\": \"imrane@example.com\",\n    \"password\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Register a new user. The account will be disabled until email verification."
+					},
+					"response": []
+				},
+				{
+					"name": "1.2 Register - Validation Error (no email)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test('Response contains validation errors', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.errors).to.not.be.undefined;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"email\": \"\",\n    \"password\": \"short\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Test validation: blank email and password too short."
+					},
+					"response": []
+				},
+				{
+					"name": "1.3 Register - Duplicate Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test('Duplicate email error', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include('already in use');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Imrane\",\n    \"lastName\": \"Elak\",\n    \"email\": \"imrane@example.com\",\n    \"password\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Test registering with an email that already exists."
+					},
+					"response": []
+				},
+				{
+					"name": "1.4 Verify Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Email verified', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include('verified');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/verify?token=PASTE_TOKEN_FROM_EMAIL_HERE",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "verify"],
+							"query": [
+								{
+									"key": "token",
+									"value": "PASTE_TOKEN_FROM_EMAIL_HERE"
+								}
+							]
+						},
+						"description": "Verify email with the token received by email. Replace the token value with the actual UUID from the verification email."
+					},
+					"response": []
+				},
+				{
+					"name": "1.5 Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response contains JWT token', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.token).to.not.be.empty;",
+									"    pm.expect(jsonData.email).to.not.be.empty;",
+									"    pm.expect(jsonData.role).to.not.be.empty;",
+									"});",
+									"// Auto-save token to collection variable",
+									"var jsonData = pm.response.json();",
+									"pm.collectionVariables.set('token', jsonData.token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"imrane@example.com\",\n    \"password\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Login with email/password. Returns JWT token that is automatically saved to the collection variable {{token}}."
+					},
+					"response": []
+				},
+				{
+					"name": "1.6 Login - Bad Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"pm.test('Invalid credentials message', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include('Invalid');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"imrane@example.com\",\n    \"password\": \"WrongPassword\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Test login with wrong password."
+					},
+					"response": []
+				},
+				{
+					"name": "1.7 Forgot Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Reset link sent', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include('reset link sent');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"imrane@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/forgot-password",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "forgot-password"]
+						},
+						"description": "Request a password reset link. An email will be sent with the reset token."
+					},
+					"response": []
+				},
+				{
+					"name": "1.8 Reset Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Password reset success', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include('reset successfully');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"PASTE_RESET_TOKEN_FROM_EMAIL_HERE\",\n    \"newPassword\": \"NewPassword456!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/reset-password",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "reset-password"]
+						},
+						"description": "Reset password using the token received by email. Replace the token value."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Protected Routes (Role-Based)",
+			"item": [
+				{
+					"name": "2.1 GET /api/me (Any Authenticated)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test('Response contains user info', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.user).to.not.be.empty;",
+									"    pm.expect(jsonData.authorities).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "me"]
+						},
+						"description": "Get current user info. Requires any valid JWT token."
+					},
+					"response": []
+				},
+				{
+					"name": "2.2 GET /api/admin/test (ADMIN only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 for ADMIN or 403 for others', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/test",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "test"]
+						},
+						"description": "Test ADMIN-only access. Returns 200 if user has ROLE_ADMIN, 403 otherwise."
+					},
+					"response": []
+				},
+				{
+					"name": "2.3 GET /api/projects/test (ADMIN or MANAGER)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 for ADMIN/MANAGER or 403 for others', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/projects/test",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "projects", "test"]
+						},
+						"description": "Test ADMIN/MANAGER access. Returns 200 if user has ROLE_ADMIN or ROLE_MANAGER, 403 otherwise."
+					},
+					"response": []
+				},
+				{
+					"name": "2.4 GET /api/me (No Token - 401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 401 or 403', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "me"]
+						},
+						"description": "Test accessing a protected route without a token. Should return 401/403."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. OAuth2 (Browser)",
+			"item": [
+				{
+					"name": "3.1 Google OAuth2 Login (open in browser)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/oauth2/authorization/google",
+							"host": ["{{baseUrl}}"],
+							"path": ["oauth2", "authorization", "google"]
+						},
+						"description": "Open this URL in a BROWSER (not Postman) to initiate Google OAuth2 login. After successful login, you'll be redirected to: http://localhost:3000/oauth2/callback?token=<JWT>"
+					},
+					"response": []
+				},
+				{
+					"name": "3.2 GitHub OAuth2 Login (open in browser)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/oauth2/authorization/github",
+							"host": ["{{baseUrl}}"],
+							"path": ["oauth2", "authorization", "github"]
+						},
+						"description": "Open this URL in a BROWSER (not Postman) to initiate GitHub OAuth2 login. After successful login, you'll be redirected to: http://localhost:3000/oauth2/callback?token=<JWT>"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

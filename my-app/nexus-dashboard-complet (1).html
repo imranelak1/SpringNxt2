@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Plateforme Intelligente de Gestion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --surface: #111318;
+  --surface2: #181c24;
+  --surface3: #1e2330;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #4fffb0;
+  --accent2: #3d8aff;
+  --accent3: #ff6b6b;
+  --accent4: #ffcb47;
+  --accent5: #a78bfa;
+  --text: #e8eaf0;
+  --text-muted: #6b7280;
+  --text-dim: #9ca3af;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse 800px 600px at 10% 20%, rgba(79,255,176,0.04) 0%, transparent 70%),
+              radial-gradient(ellipse 600px 500px at 85% 70%, rgba(61,138,255,0.05) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+.app { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+/* === SIDEBAR === */
+.sidebar {
+  width: 240px; min-width: 240px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; color: #0a0c10;
+}
+.logo-text { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.5px; }
+.logo-text span { color: var(--accent); }
+.ws-sel { margin: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+.ws-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+.ws-name { font-size: 13px; font-weight: 500; }
+.nav { flex: 1; padding: 14px 8px; overflow-y: auto; }
+.nav-section { margin-bottom: 18px; }
+.nav-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); padding: 0 12px; margin-bottom: 5px; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text-dim); transition: all 0.15s; margin-bottom: 1px; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: rgba(79,255,176,0.09); color: var(--accent); }
+.nav-icon { width: 15px; text-align: center; font-size: 14px; }
+.nbadge { margin-left: auto; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 20px; line-height: 1.4; }
+.nbadge-red { background: var(--accent3); color: white; }
+.nbadge-blue { background: var(--accent2); color: white; }
+.nbadge-muted { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.pdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sidebar-footer { border-top: 1px solid var(--border); padding: 13px 12px; display: flex; align-items: center; gap: 10px; }
+.av { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: white; flex-shrink: 0; }
+.user-name { font-size: 13px; font-weight: 500; }
+.user-role { font-size: 11px; color: var(--text-muted); }
+
+/* === MAIN === */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { height: 58px; border-bottom: 1px solid var(--border); padding: 0 26px; display: flex; align-items: center; gap: 14px; background: rgba(10,12,16,0.7); backdrop-filter: blur(10px); }
+.page-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; flex: 1; }
+.search-box { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; width: 210px; }
+.search-box input { background: none; border: none; outline: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; width: 100%; }
+.search-box input::placeholder { color: var(--text-muted); }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #0a0c10; }
+.btn-primary:hover { background: #62ffc0; }
+.btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.icon-btn { width: 34px; height: 34px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-dim); font-size: 14px; transition: all 0.15s; }
+.icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.notif-rel { position: relative; }
+.notif-rel::after { content: ''; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent3); border: 2px solid var(--bg); }
+.content { flex: 1; overflow-y: auto; padding: 24px 26px; }
+
+/* VIEWS */
+.view { display: none; animation: fadeUp 0.3s both; }
+.view.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* CARDS */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.card-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.card-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; flex: 1; }
+.card-action { font-size: 12px; color: var(--accent); cursor: pointer; }
+.card-body { padding: 16px 20px; }
+
+/* STATS */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; position: relative; overflow: hidden; cursor: pointer; transition: all 0.2s; }
+.stat-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.12); }
+.stat-card::after { content: ''; position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; border-radius: 50%; opacity: 0.12; }
+.sc1::after { background: var(--accent); }
+.sc2::after { background: var(--accent2); }
+.sc3::after { background: var(--accent4); }
+.sc4::after { background: var(--accent3); }
+.stat-lbl { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+.stat-val { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; line-height: 1; margin-bottom: 7px; }
+.sc1 .stat-val { color: var(--accent); }
+.sc2 .stat-val { color: var(--accent2); }
+.sc3 .stat-val { color: var(--accent4); }
+.sc4 .stat-val { color: var(--accent3); }
+.stat-chg { font-size: 11px; display: flex; align-items: center; gap: 4px; }
+.up { color: var(--accent); } .down { color: var(--accent3); }
+
+/* TABLE */
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); padding: 10px 20px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.tbl td { padding: 13px 20px; border-bottom: 1px solid rgba(255,255,255,0.035); vertical-align: middle; }
+.tbl tbody tr { transition: background 0.1s; cursor: pointer; }
+.tbl tbody tr:hover td { background: rgba(255,255,255,0.025); }
+.tbl tbody tr:last-child td { border-bottom: none; }
+
+/* STATUS */
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+.b-green { background: rgba(79,255,176,0.1); color: var(--accent); } .b-green::before { background: var(--accent); }
+.b-yellow { background: rgba(255,203,71,0.1); color: var(--accent4); } .b-yellow::before { background: var(--accent4); }
+.b-blue { background: rgba(61,138,255,0.1); color: var(--accent2); } .b-blue::before { background: var(--accent2); }
+.b-gray { background: rgba(107,114,128,0.12); color: var(--text-muted); } .b-gray::before { background: var(--text-muted); }
+.b-red { background: rgba(255,107,107,0.1); color: var(--accent3); } .b-red::before { background: var(--accent3); }
+.b-purple { background: rgba(167,139,250,0.1); color: var(--accent5); } .b-purple::before { background: var(--accent5); }
+
+/* PROGRESS */
+.pbar-wrap { display: flex; align-items: center; gap: 8px; }
+.pbar { flex: 1; height: 5px; background: var(--surface2); border-radius: 10px; overflow: hidden; min-width: 60px; }
+.pfill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+.ppct { font-size: 12px; color: var(--text-dim); min-width: 30px; }
+
+/* TEAM AVATARS */
+.team-stack { display: flex; }
+.team-stack .av { width: 24px; height: 24px; font-size: 9px; border: 2px solid var(--surface); margin-right: -7px; }
+.team-stack .av:last-child { margin-right: 0; }
+
+/* GRID LAYOUTS */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+.grid-lr { display: grid; grid-template-columns: 1fr 340px; gap: 18px; }
+.grid-rl { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }
+.col-stack { display: flex; flex-direction: column; gap: 18px; }
+.mb18 { margin-bottom: 18px; }
+.mb10 { margin-bottom: 10px; }
+
+/* AI CARD */
+.ai-card { background: linear-gradient(135deg,rgba(79,255,176,0.06),rgba(61,138,255,0.06)); border: 1px solid rgba(79,255,176,0.15); border-radius: 14px; padding: 18px; position: relative; overflow: hidden; }
+.ai-card::before { content: ''; position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; background: radial-gradient(circle,rgba(79,255,176,0.1),transparent 70%); }
+.ai-badge { background: linear-gradient(135deg,var(--accent),var(--accent2)); color: #0a0c10; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+.ai-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; }
+.ai-insight { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; margin-bottom: 8px; display: flex; gap: 9px; align-items: flex-start; }
+.ai-insight:last-child { margin-bottom: 0; }
+.insight-ico { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.insight-txt { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; }
+.insight-txt strong { color: var(--text); font-weight: 500; }
+
+/* TIMELINE */
+.tl-item { padding: 12px 20px; display: flex; gap: 12px; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.1s; }
+.tl-item:hover { background: rgba(255,255,255,0.025); }
+.tl-item:last-child { border-bottom: none; }
+.tl-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.tl-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.tl-sub { font-size: 11.5px; color: var(--text-muted); }
+.tl-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+/* KANBAN */
+.kanban-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+.kb-col { background: var(--surface2); border-radius: 12px; padding: 12px; }
+.kb-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.kb-dot { width: 8px; height: 8px; border-radius: 50%; }
+.kb-title { font-size: 12px; font-weight: 600; flex: 1; }
+.kb-count { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 1px 7px; font-size: 11px; color: var(--text-muted); }
+.task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; }
+.task-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-1px); }
+.task-card:last-child { margin-bottom: 0; }
+.task-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 6px; }
+.tt-des { background: rgba(167,139,250,0.12); color: var(--accent5); }
+.tt-dev { background: rgba(61,138,255,0.12); color: var(--accent2); }
+.tt-dat { background: rgba(255,203,71,0.1); color: var(--accent4); }
+.tt-qa { background: rgba(79,255,176,0.1); color: var(--accent); }
+.tt-mkt { background: rgba(255,107,107,0.1); color: var(--accent3); }
+.task-title { font-size: 12.5px; font-weight: 500; line-height: 1.4; margin-bottom: 9px; }
+.task-footer { display: flex; align-items: center; gap: 7px; }
+.task-due { font-size: 11px; color: var(--text-muted); flex: 1; }
+.pri-dot { width: 7px; height: 7px; border-radius: 50%; }
+.ph { background: var(--accent3); } .pm { background: var(--accent4); } .pl { background: var(--accent); }
+
+/* RESOURCE ROWS */
+.res-row { padding: 11px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.res-row:last-child { border-bottom: none; }
+.res-name { font-size: 13px; font-weight: 500; }
+.res-role { font-size: 11px; color: var(--text-muted); }
+.res-load { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+.rl-hi { background: rgba(255,107,107,0.12); color: var(--accent3); }
+.rl-md { background: rgba(255,203,71,0.1); color: var(--accent4); }
+.rl-lo { background: rgba(79,255,176,0.1); color: var(--accent); }
+.mini-bar { width: 56px; height: 4px; background: var(--surface2); border-radius: 10px; overflow: hidden; }
+.mini-fill { height: 100%; border-radius: 10px; }
+
+/* CHART BARS (CSS-only) */
+.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; padding: 0 4px; }
+.bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.bar { width: 100%; border-radius: 4px 4px 0 0; transition: opacity 0.2s; cursor: pointer; }
+.bar:hover { opacity: 0.75; }
+.bar-lbl { font-size: 10px; color: var(--text-muted); }
+
+/* DONUT (CSS) */
+.donut-wrap { position: relative; width: 100px; height: 100px; }
+.donut-ring { width: 100px; height: 100px; border-radius: 50%; position: relative; }
+.donut-center { position: absolute; inset: 18px; background: var(--surface); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.donut-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent); }
+.donut-sub { font-size: 10px; color: var(--text-muted); }
+
+/* MISC */
+.section-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+.section-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 18px; }
+.divider { height: 1px; background: var(--border); margin: 14px 0; }
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; transition: all 0.15s; display: inline-block; }
+.tag:hover { border-color: var(--accent); color: var(--accent); }
+.tag.sel { background: rgba(79,255,176,0.1); border-color: var(--accent); color: var(--accent); }
+.empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+.empty-state .empty-ico { font-size: 36px; margin-bottom: 10px; }
+.empty-state p { font-size: 14px; }
+
+/* BUDGET BARS */
+.bud-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.bud-row:last-child { border-bottom: none; }
+.bud-label { font-size: 13px; min-width: 140px; }
+.bud-bar { flex: 1; height: 8px; background: var(--surface2); border-radius: 10px; overflow: hidden; }
+.bud-fill { height: 100%; border-radius: 10px; }
+.bud-val { font-size: 12px; color: var(--text-dim); min-width: 80px; text-align: right; }
+
+/* CALENDAR GRID */
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
+.cal-day-lbl { text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px; font-weight: 500; }
+.cal-day { background: var(--surface2); border-radius: 8px; padding: 8px; min-height: 64px; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; }
+.cal-day:hover { border-color: var(--border2); }
+.cal-day.today { border-color: var(--accent); background: rgba(79,255,176,0.05); }
+.cal-day.empty { background: transparent; border: none; cursor: default; }
+.cal-num { font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+.today .cal-num { color: var(--accent); }
+.cal-event { font-size: 10px; background: rgba(61,138,255,0.15); color: var(--accent2); border-radius: 3px; padding: 1px 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-event.ev-green { background: rgba(79,255,176,0.12); color: var(--accent); }
+.cal-event.ev-yellow { background: rgba(255,203,71,0.12); color: var(--accent4); }
+.cal-event.ev-red { background: rgba(255,107,107,0.12); color: var(--accent3); }
+.cal-event.ev-purple { background: rgba(167,139,250,0.12); color: var(--accent5); }
+
+/* PERF GAUGES */
+.gauge-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.gauge-item { flex: 1; min-width: 120px; background: var(--surface2); border-radius: 10px; padding: 14px; text-align: center; }
+.gauge-val { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 700; }
+.gauge-lbl { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.gauge-chg { font-size: 11px; margin-top: 5px; }
+
+/* SETTINGS */
+.settings-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 18px; }
+.settings-row { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.settings-row:last-child { border-bottom: none; }
+.settings-info { flex: 1; }
+.settings-label { font-size: 13.5px; font-weight: 500; }
+.settings-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.toggle { width: 38px; height: 21px; background: var(--surface2); border-radius: 20px; position: relative; cursor: pointer; border: 1px solid var(--border); transition: background 0.2s; }
+.toggle.on { background: var(--accent); border-color: var(--accent); }
+.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: white; transition: transform 0.2s; }
+.toggle.on::after { transform: translateX(17px); }
+.settings-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; width: 200px; outline: none; }
+.settings-input:focus { border-color: var(--accent); }
+
+/* NOTIF ITEMS */
+.notif-item { padding: 14px 20px; display: flex; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.1s; }
+.notif-item:hover { background: rgba(255,255,255,0.02); }
+.notif-item:last-child { border-bottom: none; }
+.notif-item.unread { background: rgba(79,255,176,0.02); }
+.notif-ico { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.notif-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+.notif-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+.notif-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.unread-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 6px; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">N</div>
+    <div class="logo-text">NEX<span>US</span></div>
+  </div>
+  <div class="ws-sel">
+    <div>
+      <div class="ws-label">Espace de travail</div>
+      <div class="ws-name">Agence Créative</div>
+    </div>
+    <span style="color:var(--text-muted)">⌄</span>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">
+      <div class="nav-lbl">Principal</div>
+      <div class="nav-item active" onclick="switchView('dashboard',this)"><span class="nav-icon">⊞</span> Tableau de bord</div>
+      <div class="nav-item" onclick="switchView('projets',this)"><span class="nav-icon">◫</span> Projets <span class="nbadge nbadge-muted">12</span></div>
+      <div class="nav-item" onclick="switchView('taches',this)"><span class="nav-icon">◈</span> Tâches <span class="nbadge nbadge-red">5</span></div>
+      <div class="nav-item" onclick="switchView('calendrier',this)"><span class="nav-icon">◉</span> Calendrier</div>
+      <div class="nav-item" onclick="switchView('ressources',this)"><span class="nav-icon">◑</span> Ressources</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-lbl">Analyses</div>
+      <div class="nav-item" onclick="switchView('rapports',this)"><span class="nav-icon">◰</span> Rapports <span class="nbadge nbadge-blue">IA</span></div>
+      <div class="nav-item" onclick="switchView('budgets',this)"><span class="nav-icon">◧</span> Budgets</div>
+      <div class="nav-item" onclick="switchView('performance',this)"><span class="nav-icon">◊</span> Performance</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-lbl">Autres</div>
+      <div class="nav-item" onclick="switchView('notifications',this)"><span class="nav-icon">🔔</span> Notifications <span class="nbadge nbadge-red">8</span></div>
+      <div class="nav-item" onclick="switchView('parametres',this)"><span class="nav-icon">⚙</span> Paramètres</div>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="av" style="background:linear-gradient(135deg,#667eea,#764ba2)">SA</div>
+    <div style="flex:1;min-width:0">
+      <div class="user-name">Sofia Amrani</div>
+      <div class="user-role">Chef de Projet</div>
+    </div>
+    <div style="color:var(--text-muted);cursor:pointer">⋯</div>
+  </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title" id="pageTitle">Tableau de bord</div>
+    <span style="font-size:11px;color:var(--text-muted);background:var(--surface2);padding:3px 9px;border-radius:6px;border:1px solid var(--border)">Mar 3 Mars 2025</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="search-box"><span style="color:var(--text-muted);font-size:13px">⌕</span><input type="text" placeholder="Rechercher..."><span style="font-size:11px;color:var(--text-muted);background:var(--surface2);padding:1px 5px;border-radius:4px;border:1px solid var(--border)">⌘K</span></div>
+      <div class="icon-btn notif-rel" onclick="switchView('notifications',null)">🔔</div>
+      <button class="btn btn-primary btn-sm" onclick="switchView('projets',null)">＋ Nouveau</button>
+    </div>
+  </div>
+  <div class="content">
+
+<!-- ===================================================
+     VUE 1 — TABLEAU DE BORD
+     =================================================== -->
+<div id="view-dashboard" class="view active">
+  <div class="stats-row">
+    <div class="stat-card sc1"><div class="stat-lbl">Projets actifs</div><div class="stat-val">12</div><div class="stat-chg up">↑ +3 ce mois</div></div>
+    <div class="stat-card sc2"><div class="stat-lbl">Tâches en cours</div><div class="stat-val">84</div><div class="stat-chg up">↑ +12% semaine</div></div>
+    <div class="stat-card sc3"><div class="stat-lbl">Budget utilisé</div><div class="stat-val">68%</div><div class="stat-chg down">↓ −5% vs objectif</div></div>
+    <div class="stat-card sc4"><div class="stat-lbl">Délais manqués</div><div class="stat-val">3</div><div class="stat-chg down">⚠ Attention requise</div></div>
+  </div>
+  <div class="grid-lr mb18">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Projets en cours</div><button class="btn btn-ghost btn-sm">Filtrer ▾</button><span class="card-action" onclick="switchView('projets',null)">Voir tout →</span></div>
+      <table class="tbl">
+        <thead><tr><th>Projet</th><th>Statut</th><th>Avancement</th><th>Équipe</th><th>Échéance</th></tr></thead>
+        <tbody>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;background:rgba(79,255,176,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">🌐</div><div><div style="font-size:13px;font-weight:500">Refonte Site Web</div><div style="font-size:11px;color:var(--text-muted)">TechCorp Maroc</div></div></div></td><td><span class="badge b-green">En cours</span></td><td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:72%"></div></div><span class="ppct">72%</span></div></td><td><div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#667eea,#764ba2)">SA</div><div class="av" style="background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><div class="av" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">MR</div></div></td><td style="font-size:12.5px;color:var(--text-dim)">28 Mar</td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;background:rgba(61,138,255,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">📱</div><div><div style="font-size:13px;font-weight:500">Application Mobile</div><div style="font-size:11px;color:var(--text-muted)">StartupX</div></div></div></td><td><span class="badge b-yellow">En révision</span></td><td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:89%"></div></div><span class="ppct">89%</span></div></td><td><div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">HB</div><div class="av" style="background:linear-gradient(135deg,#fa709a,#fee140)">YE</div></div></td><td style="font-size:12.5px;color:var(--accent3)">15 Mar ⚠</td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;background:rgba(255,203,71,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">📣</div><div><div style="font-size:13px;font-weight:500">Campagne Q2</div><div style="font-size:11px;color:var(--text-muted)">BrandMax</div></div></div></td><td><span class="badge b-green">En cours</span></td><td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:34%"></div></div><span class="ppct">34%</span></div></td><td><div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#f093fb,#f5576c)">NA</div><div class="av" style="background:linear-gradient(135deg,#667eea,#764ba2)">IK</div></div></td><td style="font-size:12.5px;color:var(--text-dim)">12 Avr</td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;background:rgba(167,139,250,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">🎨</div><div><div style="font-size:13px;font-weight:500">Design System</div><div style="font-size:11px;color:var(--text-muted)">Interne</div></div></div></td><td><span class="badge b-gray">En pause</span></td><td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:55%"></div></div><span class="ppct">55%</span></div></td><td><div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">KT</div></div></td><td style="font-size:12.5px;color:var(--text-dim)">—</td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;background:rgba(61,138,255,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">📊</div><div><div style="font-size:13px;font-weight:500">Dashboard Analytics</div><div style="font-size:11px;color:var(--text-muted)">Groupe Atlas</div></div></div></td><td><span class="badge b-blue">Livré</span></td><td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:100%;background:var(--accent2)"></div></div><span class="ppct" style="color:var(--accent2)">100%</span></div></td><td><div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">SA</div><div class="av" style="background:linear-gradient(135deg,#fa709a,#fee140)">MR</div></div></td><td style="font-size:12.5px;color:var(--accent)">✓ Livré</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="col-stack">
+      <div class="ai-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="ai-badge">✦ IA</span><span class="ai-title">Insights Intelligents</span></div>
+        <div class="ai-insight"><span class="insight-ico">⚡</span><div class="insight-txt"><strong>Risque délai :</strong> App Mobile (15 Mar) — 3 tâches critiques non assignées. Réallocation recommandée.</div></div>
+        <div class="ai-insight"><span class="insight-ico">👥</span><div class="insight-txt"><strong>Surcharge :</strong> Karima Tahiri à 138%. Suggère déplacer 2 tâches vers Youssef El.</div></div>
+        <div class="ai-insight"><span class="insight-ico">💰</span><div class="insight-txt"><strong>Budget Campagne Q2</strong> risque +8% dépassement. Revoyez avant mi-mars.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Activité récente</div></div>
+        <div class="tl-item"><div class="tl-dot" style="background:var(--accent)"></div><div style="flex:1"><div class="tl-title">Maquette V3 soumise</div><div class="tl-sub">Refonte Site Web · Karima</div></div><div class="tl-time">10 min</div></div>
+        <div class="tl-item"><div class="tl-dot" style="background:var(--accent2)"></div><div style="flex:1"><div class="tl-title">Sprint #8 terminé</div><div class="tl-sub">Application Mobile · Hassan</div></div><div class="tl-time">1h</div></div>
+        <div class="tl-item"><div class="tl-dot" style="background:var(--accent4)"></div><div style="flex:1"><div class="tl-title">Budget révisé (+12k MAD)</div><div class="tl-sub">Campagne Q2 · Sofia</div></div><div class="tl-time">3h</div></div>
+        <div class="tl-item"><div class="tl-dot" style="background:var(--accent5)"></div><div style="flex:1"><div class="tl-title">Nouveau client ajouté</div><div class="tl-sub">StartupX · Admin</div></div><div class="tl-time">Hier</div></div>
+        <div class="tl-item"><div class="tl-dot" style="background:var(--accent3)"></div><div style="flex:1"><div class="tl-title">Délai dépassé — QA Phase 2</div><div class="tl-sub">Application Mobile · Système</div></div><div class="tl-time">Hier</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Tâches urgentes</div><span class="card-action" onclick="switchView('taches',null)">Voir tout →</span></div>
+      <div style="padding:12px">
+        <div class="task-card"><span class="task-tag tt-dev">Dev</span><div class="task-title">API paiement — intégration Stripe</div><div class="task-footer"><span class="task-due" style="color:var(--accent3)">⚠ 8 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#43e97b,#38f9d7)">HB</div><div class="pri-dot ph"></div></div></div>
+        <div class="task-card"><span class="task-tag tt-des">Design</span><div class="task-title">Wireframes page d'accueil v2</div><div class="task-footer"><span class="task-due">📅 10 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><div class="pri-dot pm"></div></div></div>
+        <div class="task-card"><span class="task-tag tt-mkt">Marketing</span><div class="task-title">Créatives visuelles réseaux sociaux</div><div class="task-footer"><span class="task-due">📅 12 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#fa709a,#fee140)">NA</div><div class="pri-dot pm"></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Charge équipe</div><span class="card-action" onclick="switchView('ressources',null)">Gérer →</span></div>
+      <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><div style="flex:1"><div class="res-name">Karima Tahiri</div><div class="res-role">UX/UI Design</div></div><div class="mini-bar"><div class="mini-fill" style="width:100%;background:var(--accent3)"></div></div><span class="res-load rl-hi">138%</span></div>
+      <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#667eea,#764ba2)">SA</div><div style="flex:1"><div class="res-name">Sofia Amrani</div><div class="res-role">Direction Projet</div></div><div class="mini-bar"><div class="mini-fill" style="width:85%;background:var(--accent4)"></div></div><span class="res-load rl-md">85%</span></div>
+      <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">HB</div><div style="flex:1"><div class="res-name">Hassan Benjelloun</div><div class="res-role">Dev Frontend</div></div><div class="mini-bar"><div class="mini-fill" style="width:60%;background:var(--accent)"></div></div><span class="res-load rl-lo">60%</span></div>
+      <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#fa709a,#fee140)">YE</div><div style="flex:1"><div class="res-name">Youssef El Amrani</div><div class="res-role">Dev Backend</div></div><div class="mini-bar"><div class="mini-fill" style="width:45%;background:var(--accent)"></div></div><span class="res-load rl-lo">45%</span></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Revenus mensuels</div><span class="card-action">en MAD</span></div>
+      <div style="padding:16px 20px 10px">
+        <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--accent);margin-bottom:4px">142 500 MAD</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Mars 2025 · <span class="up">↑ +18% vs Fév</span></div>
+        <div class="bar-chart">
+          <div class="bar-col"><div class="bar" style="height:40px;background:var(--surface2)"></div><div class="bar-lbl">Sep</div></div>
+          <div class="bar-col"><div class="bar" style="height:55px;background:var(--surface2)"></div><div class="bar-lbl">Oct</div></div>
+          <div class="bar-col"><div class="bar" style="height:35px;background:var(--surface2)"></div><div class="bar-lbl">Nov</div></div>
+          <div class="bar-col"><div class="bar" style="height:65px;background:var(--surface2)"></div><div class="bar-lbl">Déc</div></div>
+          <div class="bar-col"><div class="bar" style="height:48px;background:var(--surface2)"></div><div class="bar-lbl">Jan</div></div>
+          <div class="bar-col"><div class="bar" style="height:58px;background:var(--surface2)"></div><div class="bar-lbl">Fév</div></div>
+          <div class="bar-col"><div class="bar" style="height:80px;background:linear-gradient(180deg,var(--accent),var(--accent2))"></div><div class="bar-lbl" style="color:var(--accent)">Mar</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 2 — PROJETS
+     =================================================== -->
+<div id="view-projets" class="view">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+    <div style="flex:1">
+      <div class="section-title" style="margin:0">Tous les projets</div>
+      <div style="font-size:13px;color:var(--text-muted)">12 projets · 3 clients · 5 membres</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="tag sel">Tous</span>
+      <span class="tag">En cours</span>
+      <span class="tag">En révision</span>
+      <span class="tag">Livré</span>
+      <span class="tag">En pause</span>
+    </div>
+    <button class="btn btn-primary btn-sm">＋ Nouveau projet</button>
+  </div>
+  <div class="grid-3 mb18">
+    <div class="card" style="cursor:pointer;transition:all 0.2s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:38px;height:38px;background:rgba(79,255,176,0.1);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">🌐</div>
+          <div><div style="font-size:14px;font-weight:600">Refonte Site Web</div><div style="font-size:11px;color:var(--text-muted)">TechCorp Maroc</div></div>
+          <span class="badge b-green" style="margin-left:auto">En cours</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:12px">Refonte complète du site institutionnel avec nouveau CMS, optimisation SEO et intégration blog.</div>
+        <div class="pbar-wrap"><div class="pbar" style="height:7px"><div class="pfill" style="width:72%"></div></div><span class="ppct" style="font-size:13px;font-weight:600">72%</span></div>
+      </div>
+      <div style="padding:12px 18px;display:flex;align-items:center;gap:10px">
+        <div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#667eea,#764ba2)">SA</div><div class="av" style="background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><div class="av" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">MR</div></div>
+        <div style="flex:1;font-size:11px;color:var(--text-muted)">Échéance : <span style="color:var(--text)">28 Mar</span></div>
+        <div style="font-size:11px;color:var(--text-muted)">Budget : <span style="color:var(--accent4)">68% utilisé</span></div>
+      </div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:all 0.2s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:38px;height:38px;background:rgba(61,138,255,0.1);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">📱</div>
+          <div><div style="font-size:14px;font-weight:600">Application Mobile</div><div style="font-size:11px;color:var(--text-muted)">StartupX</div></div>
+          <span class="badge b-yellow" style="margin-left:auto">En révision</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:12px">App React Native iOS/Android avec auth, paiement Stripe, géolocalisation et notifications push.</div>
+        <div class="pbar-wrap"><div class="pbar" style="height:7px"><div class="pfill" style="width:89%"></div></div><span class="ppct" style="font-size:13px;font-weight:600">89%</span></div>
+      </div>
+      <div style="padding:12px 18px;display:flex;align-items:center;gap:10px">
+        <div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">HB</div><div class="av" style="background:linear-gradient(135deg,#fa709a,#fee140)">YE</div></div>
+        <div style="flex:1;font-size:11px;color:var(--text-muted)">Échéance : <span style="color:var(--accent3)">15 Mar ⚠</span></div>
+        <div style="font-size:11px;color:var(--text-muted)">Budget : <span style="color:var(--accent3)">94% utilisé</span></div>
+      </div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:all 0.2s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:38px;height:38px;background:rgba(255,203,71,0.1);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">📣</div>
+          <div><div style="font-size:14px;font-weight:600">Campagne Q2 2025</div><div style="font-size:11px;color:var(--text-muted)">BrandMax</div></div>
+          <span class="badge b-green" style="margin-left:auto">En cours</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:12px">Stratégie digitale 360° : social media, SEA, emailing, brand awareness Q2.</div>
+        <div class="pbar-wrap"><div class="pbar" style="height:7px"><div class="pfill" style="width:34%"></div></div><span class="ppct" style="font-size:13px;font-weight:600">34%</span></div>
+      </div>
+      <div style="padding:12px 18px;display:flex;align-items:center;gap:10px">
+        <div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#f093fb,#f5576c)">NA</div><div class="av" style="background:linear-gradient(135deg,#667eea,#764ba2)">IK</div><div class="av" style="background:linear-gradient(135deg,#fccb90,#d57eeb)">LM</div></div>
+        <div style="flex:1;font-size:11px;color:var(--text-muted)">Échéance : <span style="color:var(--text)">12 Avr</span></div>
+        <div style="font-size:11px;color:var(--text-muted)">Budget : <span style="color:var(--accent4)">34% utilisé</span></div>
+      </div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:all 0.2s;opacity:0.8" onmouseenter="this.style.transform='translateY(-2px)';this.style.opacity='1'" onmouseleave="this.style.transform='';this.style.opacity='0.8'">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:38px;height:38px;background:rgba(167,139,250,0.1);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">🎨</div>
+          <div><div style="font-size:14px;font-weight:600">Design System</div><div style="font-size:11px;color:var(--text-muted)">Interne</div></div>
+          <span class="badge b-gray" style="margin-left:auto">En pause</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:12px">Bibliothèque de composants UI, tokens design, documentation Storybook.</div>
+        <div class="pbar-wrap"><div class="pbar" style="height:7px"><div class="pfill" style="width:55%;background:linear-gradient(90deg,var(--accent5),var(--accent2))"></div></div><span class="ppct" style="font-size:13px;font-weight:600">55%</span></div>
+      </div>
+      <div style="padding:12px 18px;display:flex;align-items:center;gap:10px">
+        <div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">KT</div></div>
+        <div style="flex:1;font-size:11px;color:var(--text-muted)">Reprise : <span style="color:var(--text)">Indéfinie</span></div>
+      </div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:all 0.2s" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:38px;height:38px;background:rgba(61,138,255,0.08);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">📊</div>
+          <div><div style="font-size:14px;font-weight:600">Dashboard Analytics</div><div style="font-size:11px;color:var(--text-muted)">Groupe Atlas</div></div>
+          <span class="badge b-blue" style="margin-left:auto">Livré ✓</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:12px">Tableau de bord BI temps réel, visualisations D3.js, exports PDF/Excel.</div>
+        <div class="pbar-wrap"><div class="pbar" style="height:7px"><div class="pfill" style="width:100%;background:var(--accent2)"></div></div><span class="ppct" style="font-size:13px;font-weight:600;color:var(--accent2)">100%</span></div>
+      </div>
+      <div style="padding:12px 18px;display:flex;align-items:center;gap:10px">
+        <div class="team-stack"><div class="av" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">SA</div><div class="av" style="background:linear-gradient(135deg,#fa709a,#fee140)">MR</div></div>
+        <div style="flex:1;font-size:11px;color:var(--text-muted)">Livré le <span style="color:var(--accent)">1 Mar 2025</span></div>
+      </div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:all 0.2s;border-style:dashed" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+      <div class="empty-state" style="padding:50px 20px">
+        <div class="empty-ico">＋</div>
+        <p style="color:var(--accent)">Créer un nouveau projet</p>
+        <p style="font-size:12px;margin-top:5px">Client, budget, équipe, dates</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 3 — TÂCHES (KANBAN)
+     =================================================== -->
+<div id="view-taches" class="view">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <div style="flex:1"><div class="section-title" style="margin:0">Gestion des tâches</div><div style="font-size:13px;color:var(--text-muted)">84 tâches · Sprint 9 · App Mobile</div></div>
+    <div style="display:flex;gap:8px">
+      <span class="tag sel">Kanban</span><span class="tag">Liste</span><span class="tag">Gantt</span>
+    </div>
+    <button class="btn btn-ghost btn-sm">Filtrer ▾</button>
+    <button class="btn btn-primary btn-sm">＋ Tâche</button>
+  </div>
+  <div class="kanban-grid">
+    <div class="kb-col">
+      <div class="kb-header"><div class="kb-dot" style="background:var(--text-muted)"></div><div class="kb-title">BACKLOG</div><div class="kb-count">8</div></div>
+      <div class="task-card"><span class="task-tag tt-dat">Analyse</span><div class="task-title">Audit accessibilité WCAG 2.1</div><div class="task-footer"><span class="task-due">📅 Non planifié</span><div class="pri-dot pl"></div></div></div>
+      <div class="task-card"><span class="task-tag tt-dev">Dev</span><div class="task-title">Refactoriser module notifications</div><div class="task-footer"><span class="task-due">📅 Non planifié</span><div class="pri-dot pm"></div></div></div>
+      <div class="task-card"><span class="task-tag tt-des">Design</span><div class="task-title">Dark mode — composants secondaires</div><div class="task-footer"><span class="task-due">📅 Non planifié</span><div class="pri-dot pl"></div></div></div>
+    </div>
+    <div class="kb-col">
+      <div class="kb-header"><div class="kb-dot" style="background:var(--accent4)"></div><div class="kb-title">À FAIRE</div><div class="kb-count">6</div></div>
+      <div class="task-card"><span class="task-tag tt-des">Design</span><div class="task-title">Wireframes page d'accueil v2</div><div class="task-footer"><span class="task-due">📅 10 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><div class="pri-dot pm"></div></div></div>
+      <div class="task-card"><span class="task-tag tt-dev">Dev</span><div class="task-title">Setup CI/CD pipeline GitHub Actions</div><div class="task-footer"><span class="task-due">📅 12 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#fa709a,#fee140)">YE</div><div class="pri-dot pm"></div></div></div>
+      <div class="task-card"><span class="task-tag tt-mkt">Marketing</span><div class="task-title">Créer visuels réseaux sociaux Q2</div><div class="task-footer"><span class="task-due">📅 12 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#f093fb,#f5576c)">NA</div><div class="pri-dot pm"></div></div></div>
+      <div class="task-card"><span class="task-tag tt-dat">Analyse</span><div class="task-title">Rapport performance mensuel Q1</div><div class="task-footer"><span class="task-due">📅 15 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#667eea,#764ba2)">SA</div><div class="pri-dot pl"></div></div></div>
+    </div>
+    <div class="kb-col">
+      <div class="kb-header"><div class="kb-dot" style="background:var(--accent2)"></div><div class="kb-title">EN COURS</div><div class="kb-count">5</div></div>
+      <div class="task-card" style="border-color:rgba(61,138,255,0.2)"><span class="task-tag tt-dev">Dev</span><div class="task-title">Intégration API paiement Stripe</div><div class="task-footer"><span class="task-due" style="color:var(--accent3)">⚠ 8 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#43e97b,#38f9d7)">HB</div><div class="pri-dot ph"></div></div></div>
+      <div class="task-card" style="border-color:rgba(61,138,255,0.2)"><span class="task-tag tt-des">Design</span><div class="task-title">Composants UI — bibliothèque interne</div><div class="task-footer"><span class="task-due">📅 En continu</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><div class="pri-dot pm"></div></div></div>
+      <div class="task-card" style="border-color:rgba(61,138,255,0.2)"><span class="task-tag tt-dev">Dev</span><div class="task-title">Géolocalisation temps réel utilisateurs</div><div class="task-footer"><span class="task-due">📅 14 Mar</span><div class="av" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#fa709a,#fee140)">YE</div><div class="pri-dot ph"></div></div></div>
+    </div>
+    <div class="kb-col">
+      <div class="kb-header"><div class="kb-dot" style="background:var(--accent)"></div><div class="kb-title">TERMINÉ</div><div class="kb-count">14</div></div>
+      <div class="task-card" style="opacity:0.65"><span class="task-tag tt-qa">QA</span><div class="task-title">Tests unitaires module authentification</div><div class="task-footer"><span class="task-due" style="color:var(--accent)">✓ 2 Mar</span></div></div>
+      <div class="task-card" style="opacity:0.65"><span class="task-tag tt-des">Design</span><div class="task-title">Charte graphique BrandMax finalisée</div><div class="task-footer"><span class="task-due" style="color:var(--accent)">✓ 1 Mar</span></div></div>
+      <div class="task-card" style="opacity:0.65"><span class="task-tag tt-dat">Analyse</span><div class="task-title">Audit SEO site TechCorp Maroc</div><div class="task-footer"><span class="task-due" style="color:var(--accent)">✓ 28 Fév</span></div></div>
+      <div class="task-card" style="opacity:0.65"><span class="task-tag tt-dev">Dev</span><div class="task-title">Onboarding flow — écrans 1 à 5</div><div class="task-footer"><span class="task-due" style="color:var(--accent)">✓ 27 Fév</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 4 — CALENDRIER
+     =================================================== -->
+<div id="view-calendrier" class="view">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <button class="btn btn-ghost btn-sm">← Fév</button>
+    <div class="section-title" style="margin:0;flex:1;text-align:center">Mars 2025</div>
+    <button class="btn btn-ghost btn-sm">Avr →</button>
+    <button class="btn btn-ghost btn-sm">Mois ▾</button>
+    <button class="btn btn-primary btn-sm">＋ Événement</button>
+  </div>
+  <div class="card mb18">
+    <div style="padding:16px 18px">
+      <div class="cal-grid mb10">
+        <div class="cal-day-lbl">Lun</div><div class="cal-day-lbl">Mar</div><div class="cal-day-lbl">Mer</div><div class="cal-day-lbl">Jeu</div><div class="cal-day-lbl">Ven</div><div class="cal-day-lbl">Sam</div><div class="cal-day-lbl">Dim</div>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-day empty"></div><div class="cal-day empty"></div><div class="cal-day empty"></div><div class="cal-day empty"></div>
+        <div class="cal-day"><div class="cal-num">1</div></div>
+        <div class="cal-day"><div class="cal-num">2</div></div>
+        <div class="cal-day"><div class="cal-num">3</div><div class="cal-event ev-green">Livraison Atlas</div></div>
+        <div class="cal-day today"><div class="cal-num">4</div><div class="cal-event">Réunion TechCorp</div><div class="cal-event ev-yellow">Sprint review</div></div>
+        <div class="cal-day"><div class="cal-num">5</div><div class="cal-event ev-purple">Design review</div></div>
+        <div class="cal-day"><div class="cal-num">6</div></div>
+        <div class="cal-day"><div class="cal-num">7</div></div>
+        <div class="cal-day"><div class="cal-num">8</div><div class="cal-event ev-red">⚠ API Stripe</div></div>
+        <div class="cal-day"><div class="cal-num">9</div></div>
+        <div class="cal-day"><div class="cal-num">10</div><div class="cal-event ev-purple">Wireframes V2</div></div>
+        <div class="cal-day"><div class="cal-num">11</div></div>
+        <div class="cal-day"><div class="cal-num">12</div><div class="cal-event">Créatives Q2</div><div class="cal-event">CI/CD pipeline</div></div>
+        <div class="cal-day"><div class="cal-num">13</div></div>
+        <div class="cal-day"><div class="cal-num">14</div></div>
+        <div class="cal-day"><div class="cal-num">15</div><div class="cal-event ev-red">⚠ App Mobile</div></div>
+        <div class="cal-day"><div class="cal-num">16</div></div>
+        <div class="cal-day"><div class="cal-num">17</div></div>
+        <div class="cal-day"><div class="cal-num">18</div><div class="cal-event ev-yellow">Point BrandMax</div></div>
+        <div class="cal-day"><div class="cal-num">19</div></div>
+        <div class="cal-day"><div class="cal-num">20</div></div>
+        <div class="cal-day"><div class="cal-num">21</div></div>
+        <div class="cal-day"><div class="cal-num">22</div></div>
+        <div class="cal-day"><div class="cal-num">23</div></div>
+        <div class="cal-day"><div class="cal-num">24</div></div>
+        <div class="cal-day"><div class="cal-num">25</div></div>
+        <div class="cal-day"><div class="cal-num">26</div></div>
+        <div class="cal-day"><div class="cal-num">27</div></div>
+        <div class="cal-day"><div class="cal-num">28</div><div class="cal-event ev-green">Livraison TechCorp</div></div>
+        <div class="cal-day"><div class="cal-num">29</div></div>
+        <div class="cal-day"><div class="cal-num">30</div></div>
+        <div class="cal-day"><div class="cal-num">31</div></div>
+        <div class="cal-day empty"></div><div class="cal-day empty"></div><div class="cal-day empty"></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Événements à venir</div></div>
+      <div class="tl-item"><div class="tl-dot" style="background:var(--accent2)"></div><div style="flex:1"><div class="tl-title">Réunion client — TechCorp</div><div class="tl-sub">Mar 4 Mars · 10h00 · Zoom</div></div><span class="badge b-blue" style="font-size:10px">Aujourd'hui</span></div>
+      <div class="tl-item"><div class="tl-dot" style="background:var(--accent4)"></div><div style="flex:1"><div class="tl-title">Sprint Review #9</div><div class="tl-sub">Mar 4 Mars · 14h30 · Présentiel</div></div><span class="badge b-yellow" style="font-size:10px">Aujourd'hui</span></div>
+      <div class="tl-item"><div class="tl-dot" style="background:var(--accent3)"></div><div style="flex:1"><div class="tl-title">⚠ Deadline — API Stripe</div><div class="tl-sub">Sam 8 Mars · Fin de journée</div></div><span class="badge b-red" style="font-size:10px">Dans 4j</span></div>
+      <div class="tl-item"><div class="tl-dot" style="background:var(--accent5)"></div><div style="flex:1"><div class="tl-title">Révision wireframes V2</div><div class="tl-sub">Lun 10 Mars · 11h00</div></div><span class="badge b-gray" style="font-size:10px">Dans 6j</span></div>
+      <div class="tl-item"><div class="tl-dot" style="background:var(--accent3)"></div><div style="flex:1"><div class="tl-title">⚠ Deadline — App Mobile</div><div class="tl-sub">Sam 15 Mars · Livraison finale</div></div><span class="badge b-red" style="font-size:10px">Dans 11j</span></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Charge hebdomadaire</div><span style="font-size:12px;color:var(--text-muted)">Semaine du 3 Mar</span></div>
+      <div style="padding:16px 20px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;min-width:40px;color:var(--text-muted)">Lun</span><div class="pbar" style="height:22px;flex:1;border-radius:6px"><div class="pfill" style="width:90%;background:rgba(79,255,176,0.3);border-radius:6px;height:100%;display:flex;align-items:center;padding:0 8px"><span style="font-size:11px">Réunion TechCorp · Sprint Review</span></div></div></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;min-width:40px;color:var(--text-muted)">Mar</span><div class="pbar" style="height:22px;flex:1;border-radius:6px"><div class="pfill" style="width:50%;background:rgba(61,138,255,0.25);border-radius:6px;height:100%;display:flex;align-items:center;padding:0 8px"><span style="font-size:11px">Développement API</span></div></div></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;min-width:40px;color:var(--text-muted)">Mer</span><div class="pbar" style="height:22px;flex:1;border-radius:6px"><div class="pfill" style="width:65%;background:rgba(167,139,250,0.2);border-radius:6px;height:100%;display:flex;align-items:center;padding:0 8px"><span style="font-size:11px">Design review · Wireframes</span></div></div></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;min-width:40px;color:var(--text-muted)">Jeu</span><div class="pbar" style="height:22px;flex:1;border-radius:6px"><div class="pfill" style="width:40%;background:rgba(255,203,71,0.2);border-radius:6px;height:100%;display:flex;align-items:center;padding:0 8px"><span style="font-size:11px">Rapport mensuel Q1</span></div></div></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;min-width:40px;color:var(--text-muted)">Ven</span><div class="pbar" style="height:22px;flex:1;border-radius:6px"><div class="pfill" style="width:75%;background:rgba(255,107,107,0.2);border-radius:6px;height:100%;display:flex;align-items:center;padding:0 8px"><span style="font-size:11px">⚠ Deadline API Stripe · Tests QA</span></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 5 — RESSOURCES
+     =================================================== -->
+<div id="view-ressources" class="view">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <div style="flex:1"><div class="section-title" style="margin:0">Gestion des ressources</div><div style="font-size:13px;color:var(--text-muted)">5 membres · Semaine du 3 Mar</div></div>
+    <button class="btn btn-ghost btn-sm">Semaine ▾</button>
+    <button class="btn btn-primary btn-sm">＋ Ajouter membre</button>
+  </div>
+  <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-card sc1"><div class="stat-lbl">Membres actifs</div><div class="stat-val">5</div><div class="stat-chg">Équipe complète</div></div>
+    <div class="stat-card sc4"><div class="stat-lbl">En surcharge</div><div class="stat-val">1</div><div class="stat-chg down">⚠ Karima ≥ 130%</div></div>
+    <div class="stat-card sc2"><div class="stat-lbl">Taux moyen</div><div class="stat-val">75%</div><div class="stat-chg">Optimal : 70–85%</div></div>
+    <div class="stat-card sc3"><div class="stat-lbl">Heures planifiées</div><div class="stat-val">148h</div><div class="stat-chg up">↑ +12h vs sem. passée</div></div>
+  </div>
+  <div class="card mb18">
+    <div class="card-header"><div class="card-title">Charge par membre — semaine en cours</div></div>
+    <table class="tbl">
+      <thead><tr><th>Membre</th><th>Rôle</th><th>Projets assignés</th><th>Heures / Semaine</th><th>Charge</th><th>Disponibilité</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:9px"><div class="av" style="background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><div><div style="font-size:13px;font-weight:500">Karima Tahiri</div><div style="font-size:11px;color:var(--text-muted)">karima@nexus.ma</div></div></div></td>
+          <td><span style="font-size:12.5px">🎨 UX/UI Design</span></td>
+          <td><span style="font-size:12px;color:var(--text-dim)">Refonte Web · Design System · Campagne Q2</span></td>
+          <td><span style="font-family:'Syne',sans-serif;font-size:14px;color:var(--accent3)">55h / 40h</span></td>
+          <td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:100%;background:var(--accent3)"></div></div><span class="ppct" style="color:var(--accent3)">138%</span></div></td>
+          <td><span class="badge b-red">Surchargée</span></td>
+        </tr>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:9px"><div class="av" style="background:linear-gradient(135deg,#667eea,#764ba2)">SA</div><div><div style="font-size:13px;font-weight:500">Sofia Amrani</div><div style="font-size:11px;color:var(--text-muted)">sofia@nexus.ma</div></div></div></td>
+          <td><span style="font-size:12.5px">📋 Chef de Projet</span></td>
+          <td><span style="font-size:12px;color:var(--text-dim)">Refonte Web · App Mobile · Rapport Q1</span></td>
+          <td><span style="font-family:'Syne',sans-serif;font-size:14px;color:var(--accent4)">34h / 40h</span></td>
+          <td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:85%;background:var(--accent4)"></div></div><span class="ppct">85%</span></div></td>
+          <td><span class="badge b-yellow">Occupée</span></td>
+        </tr>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:9px"><div class="av" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">HB</div><div><div style="font-size:13px;font-weight:500">Hassan Benjelloun</div><div style="font-size:11px;color:var(--text-muted)">hassan@nexus.ma</div></div></div></td>
+          <td><span style="font-size:12.5px">💻 Dev Frontend</span></td>
+          <td><span style="font-size:12px;color:var(--text-dim)">App Mobile · API Stripe</span></td>
+          <td><span style="font-family:'Syne',sans-serif;font-size:14px;color:var(--accent)">24h / 40h</span></td>
+          <td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:60%"></div></div><span class="ppct">60%</span></div></td>
+          <td><span class="badge b-green">Disponible</span></td>
+        </tr>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:9px"><div class="av" style="background:linear-gradient(135deg,#fa709a,#fee140)">YE</div><div><div style="font-size:13px;font-weight:500">Youssef El Amrani</div><div style="font-size:11px;color:var(--text-muted)">youssef@nexus.ma</div></div></div></td>
+          <td><span style="font-size:12.5px">⚙ Dev Backend</span></td>
+          <td><span style="font-size:12px;color:var(--text-dim)">App Mobile · CI/CD</span></td>
+          <td><span style="font-family:'Syne',sans-serif;font-size:14px;color:var(--accent)">18h / 40h</span></td>
+          <td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:45%"></div></div><span class="ppct">45%</span></div></td>
+          <td><span class="badge b-green">Disponible</span></td>
+        </tr>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:9px"><div class="av" style="background:linear-gradient(135deg,#fccb90,#d57eeb)">NA</div><div><div style="font-size:13px;font-weight:500">Nadia Alami</div><div style="font-size:11px;color:var(--text-muted)">nadia@nexus.ma</div></div></div></td>
+          <td><span style="font-size:12.5px">📣 Marketing</span></td>
+          <td><span style="font-size:12px;color:var(--text-dim)">Campagne Q2 · Réseaux sociaux</span></td>
+          <td><span style="font-family:'Syne',sans-serif;font-size:14px;color:var(--accent4)">30h / 40h</span></td>
+          <td><div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:75%;background:var(--accent4)"></div></div><span class="ppct">75%</span></div></td>
+          <td><span class="badge b-green">Disponible</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="ai-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="ai-badge">✦ IA</span><span class="ai-title">Recommandations d'allocation</span></div>
+    <div class="ai-insight"><span class="insight-ico">⚡</span><div class="insight-txt"><strong>Action urgente :</strong> Déplacer "Géolocalisation temps réel" de Karima vers Youssef El Amrani. Économie de 12h sur la semaine de Karima.</div></div>
+    <div class="ai-insight"><span class="insight-ico">💡</span><div class="insight-txt"><strong>Opportunité :</strong> Hassan Benjelloun a 16h disponibles. Peut absorber 2 tâches frontend du backlog Design System.</div></div>
+    <div class="ai-insight"><span class="insight-ico">📅</span><div class="insight-txt"><strong>Prévision :</strong> Si aucune réallocation, risque de burnout pour Karima d'ici 2 semaines. Taux cible recommandé : ≤ 90%.</div></div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 6 — RAPPORTS IA
+     =================================================== -->
+<div id="view-rapports" class="view">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+    <div style="flex:1"><div class="section-title" style="margin:0">Rapports & Analyses IA</div><div style="font-size:13px;color:var(--text-muted)">Générés automatiquement · Mis à jour le 3 Mars 2025</div></div>
+    <button class="btn btn-ghost btn-sm">📥 Exporter PDF</button>
+    <button class="btn btn-primary btn-sm">✦ Générer rapport</button>
+  </div>
+  <div class="grid-lr">
+    <div class="col-stack">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Synthèse mensuelle — Février 2025</div><span class="badge b-green">Généré par IA</span></div>
+        <div class="card-body">
+          <div style="font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:16px">
+            Février a été un mois solide pour l'agence avec <strong style="color:var(--text)">5 projets actifs</strong> et un taux de livraison dans les délais de <strong style="color:var(--accent)">80%</strong>. Le chiffre d'affaires réalisé s'élève à <strong style="color:var(--accent4)">121 000 MAD</strong>, soit une hausse de <strong style="color:var(--accent)">+14%</strong> par rapport à janvier. La satisfaction client moyenne est de <strong style="color:var(--accent)">4.6/5</strong>.
+          </div>
+          <div class="divider"></div>
+          <div class="gauge-row">
+            <div class="gauge-item"><div class="gauge-val" style="color:var(--accent)">80%</div><div class="gauge-lbl">Tâches livrées dans les délais</div></div>
+            <div class="gauge-item"><div class="gauge-val" style="color:var(--accent2)">4.6</div><div class="gauge-lbl">Satisfaction client /5</div></div>
+            <div class="gauge-item"><div class="gauge-val" style="color:var(--accent4)">+14%</div><div class="gauge-lbl">Croissance CA</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Évolution des projets livrés</div><span style="font-size:12px;color:var(--text-muted)">6 derniers mois</span></div>
+        <div style="padding:16px 20px 12px">
+          <div style="display:flex;align-items:flex-end;gap:8px;height:90px;margin-bottom:8px">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:var(--surface2);height:45px;border-radius:5px 5px 0 0"></div><span style="font-size:10px;color:var(--text-muted)">Oct</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:var(--surface2);height:60px;border-radius:5px 5px 0 0"></div><span style="font-size:10px;color:var(--text-muted)">Nov</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:var(--surface2);height:40px;border-radius:5px 5px 0 0"></div><span style="font-size:10px;color:var(--text-muted)">Déc</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:rgba(61,138,255,0.3);height:75px;border-radius:5px 5px 0 0"></div><span style="font-size:10px;color:var(--text-muted)">Jan</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:rgba(61,138,255,0.4);height:65px;border-radius:5px 5px 0 0"></div><span style="font-size:10px;color:var(--text-muted)">Fév</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:linear-gradient(180deg,var(--accent),var(--accent2));height:90px;border-radius:5px 5px 0 0"></div><span style="font-size:10px;color:var(--accent)">Mar</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Prévisions Q2 2025</div><span class="badge b-purple">Prédictif IA</span></div>
+        <div class="card-body">
+          <div style="font-size:13px;color:var(--text-dim);line-height:1.7">
+            Sur la base des tendances actuelles, l'IA prédit un CA de <strong style="color:var(--accent4)">420 000 MAD</strong> sur le Q2, avec un pic en mai (+22%). 
+            3 nouveaux projets sont attendus selon le pipeline. Risque principal : saturation des ressources design si Campagne Q2 et Design System reprennent simultanément.
+          </div>
+          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+            <span class="badge b-green">↑ CA +22% prévu en Mai</span>
+            <span class="badge b-yellow">⚠ Risque ressources Design</span>
+            <span class="badge b-blue">3 projets en pipeline</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-stack">
+      <div class="ai-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><span class="ai-badge">✦ IA</span><span class="ai-title">Analyse intelligente</span></div>
+        <div class="ai-insight"><span class="insight-ico">📈</span><div class="insight-txt"><strong>Point fort :</strong> Taux de satisfaction client de 4.6/5, meilleur score en 12 mois. Le projet Dashboard Atlas a obtenu 5/5.</div></div>
+        <div class="ai-insight"><span class="insight-ico">⚠</span><div class="insight-txt"><strong>Point d'attention :</strong> 3 délais manqués en février — tous liés au projet App Mobile. Cause identifiée : scope creep non documenté.</div></div>
+        <div class="ai-insight"><span class="insight-ico">💡</span><div class="insight-txt"><strong>Recommandation :</strong> Instaurer une réunion hebdomadaire de scope review pour les projets en phase finale. Réduction estimée des retards : 70%.</div></div>
+        <div class="ai-insight"><span class="insight-ico">🎯</span><div class="insight-txt"><strong>Objectif Mars :</strong> Clôturer App Mobile à temps. Livrer Refonte Web à 90%+. Démarrer sprint 1 de Campagne Q2.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Répartition par client</div></div>
+        <div style="padding:16px 20px">
+          <div class="bud-row"><div class="bud-label">TechCorp Maroc</div><div class="bud-bar"><div class="bud-fill" style="width:72%;background:var(--accent)"></div></div><div class="bud-val" style="color:var(--accent)">72 000 MAD</div></div>
+          <div class="bud-row"><div class="bud-label">StartupX</div><div class="bud-bar"><div class="bud-fill" style="width:50%;background:var(--accent2)"></div></div><div class="bud-val" style="color:var(--accent2)">50 000 MAD</div></div>
+          <div class="bud-row"><div class="bud-label">BrandMax</div><div class="bud-bar"><div class="bud-fill" style="width:20%;background:var(--accent4)"></div></div><div class="bud-val" style="color:var(--accent4)">20 500 MAD</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 7 — BUDGETS
+     =================================================== -->
+<div id="view-budgets" class="view">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+    <div style="flex:1"><div class="section-title" style="margin:0">Suivi des budgets</div><div style="font-size:13px;color:var(--text-muted)">Mars 2025 · Budget total alloué : 520 000 MAD</div></div>
+    <button class="btn btn-ghost btn-sm">📥 Exporter Excel</button>
+    <button class="btn btn-primary btn-sm">＋ Ajouter dépense</button>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card sc1"><div class="stat-lbl">Budget total</div><div class="stat-val">520k</div><div class="stat-chg">MAD alloués</div></div>
+    <div class="stat-card sc3"><div class="stat-lbl">Consommé</div><div class="stat-val">354k</div><div class="stat-chg down">68% du total</div></div>
+    <div class="stat-card sc2"><div class="stat-lbl">Restant</div><div class="stat-val">166k</div><div class="stat-chg up">32% disponible</div></div>
+    <div class="stat-card sc4"><div class="stat-lbl">Dépassements</div><div class="stat-val">2</div><div class="stat-chg down">⚠ App Mobile, Campagne</div></div>
+  </div>
+  <div class="grid-lr">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Budget par projet</div></div>
+      <table class="tbl">
+        <thead><tr><th>Projet</th><th>Alloué</th><th>Consommé</th><th>Restant</th><th>État</th></tr></thead>
+        <tbody>
+          <tr>
+            <td style="font-size:13px;font-weight:500">🌐 Refonte Site Web</td>
+            <td style="font-size:12.5px;color:var(--text-dim)">120 000 MAD</td>
+            <td>
+              <div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:68%"></div></div><span style="font-size:12px;min-width:65px">81 600 MAD</span></div>
+            </td>
+            <td style="font-size:12.5px;color:var(--accent)">38 400 MAD</td>
+            <td><span class="badge b-green">✓ Normal</span></td>
+          </tr>
+          <tr>
+            <td style="font-size:13px;font-weight:500">📱 Application Mobile</td>
+            <td style="font-size:12.5px;color:var(--text-dim)">180 000 MAD</td>
+            <td>
+              <div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:100%;background:var(--accent3)"></div></div><span style="font-size:12px;min-width:65px;color:var(--accent3)">194 000 MAD</span></div>
+            </td>
+            <td style="font-size:12.5px;color:var(--accent3)">−14 000 MAD</td>
+            <td><span class="badge b-red">⚠ Dépassé</span></td>
+          </tr>
+          <tr>
+            <td style="font-size:13px;font-weight:500">📣 Campagne Q2</td>
+            <td style="font-size:12.5px;color:var(--text-dim)">95 000 MAD</td>
+            <td>
+              <div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:35%;background:var(--accent4)"></div></div><span style="font-size:12px;min-width:65px">33 250 MAD</span></div>
+            </td>
+            <td style="font-size:12.5px;color:var(--accent)">61 750 MAD</td>
+            <td><span class="badge b-yellow">Surveiller</span></td>
+          </tr>
+          <tr>
+            <td style="font-size:13px;font-weight:500">🎨 Design System</td>
+            <td style="font-size:12.5px;color:var(--text-dim)">45 000 MAD</td>
+            <td>
+              <div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:55%;background:var(--accent5)"></div></div><span style="font-size:12px;min-width:65px">24 750 MAD</span></div>
+            </td>
+            <td style="font-size:12.5px;color:var(--accent)">20 250 MAD</td>
+            <td><span class="badge b-gray">En pause</span></td>
+          </tr>
+          <tr>
+            <td style="font-size:13px;font-weight:500">📊 Dashboard Analytics</td>
+            <td style="font-size:12.5px;color:var(--text-dim)">80 000 MAD</td>
+            <td>
+              <div class="pbar-wrap"><div class="pbar"><div class="pfill" style="width:100%;background:var(--accent2)"></div></div><span style="font-size:12px;min-width:65px;color:var(--accent2)">80 000 MAD</span></div>
+            </td>
+            <td style="font-size:12.5px;color:var(--accent2)">0 MAD</td>
+            <td><span class="badge b-blue">Livré ✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="col-stack">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Dépenses par catégorie</div></div>
+        <div style="padding:16px 20px">
+          <div class="bud-row"><div class="bud-label">💻 Développement</div><div class="bud-bar"><div class="bud-fill" style="width:72%;background:var(--accent2)"></div></div><div class="bud-val" style="color:var(--accent2)">162 000</div></div>
+          <div class="bud-row"><div class="bud-label">🎨 Design</div><div class="bud-bar"><div class="bud-fill" style="width:40%;background:var(--accent5)"></div></div><div class="bud-val" style="color:var(--accent5)">88 000</div></div>
+          <div class="bud-row"><div class="bud-label">📣 Marketing</div><div class="bud-bar"><div class="bud-fill" style="width:28%;background:var(--accent3)"></div></div><div class="bud-val" style="color:var(--accent3)">62 000</div></div>
+          <div class="bud-row"><div class="bud-label">⚙ Infra / SaaS</div><div class="bud-bar"><div class="bud-fill" style="width:20%;background:var(--accent4)"></div></div><div class="bud-val" style="color:var(--accent4)">42 000</div></div>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="ai-badge">✦ IA</span><span class="ai-title">Alertes budgétaires</span></div>
+        <div class="ai-insight"><span class="insight-ico">🔴</span><div class="insight-txt"><strong>App Mobile :</strong> Budget dépassé de 14k MAD. Négocier avenants client ou absorber sur Q2.</div></div>
+        <div class="ai-insight"><span class="insight-ico">🟡</span><div class="insight-txt"><strong>Campagne Q2 :</strong> Projection actuelle indique +8% dépassement potentiel. Revoyez dépenses médias.</div></div>
+        <div class="ai-insight"><span class="insight-ico">✅</span><div class="insight-txt"><strong>Refonte Web :</strong> Budget bien maîtrisé. Marge suffisante pour absorber 2–3 révisions supplémentaires.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 8 — PERFORMANCE
+     =================================================== -->
+<div id="view-performance" class="view">
+  <div style="margin-bottom:20px"><div class="section-title">Performance globale</div><div class="section-sub">Indicateurs clés · Comparaison Mars vs Février 2025</div></div>
+  <div class="stats-row">
+    <div class="stat-card sc1"><div class="stat-lbl">Vélocité équipe</div><div class="stat-val">87</div><div class="stat-chg up">↑ +9 pts vs Fév</div></div>
+    <div class="stat-card sc2"><div class="stat-lbl">Taux livraison</div><div class="stat-val">80%</div><div class="stat-chg up">↑ +5% vs Fév</div></div>
+    <div class="stat-card sc3"><div class="stat-lbl">Satisfaction client</div><div class="stat-val">4.6</div><div class="stat-chg up">↑ +0.3 vs Fév</div></div>
+    <div class="stat-card sc4"><div class="stat-lbl">Bugs critiques</div><div class="stat-val">7</div><div class="stat-chg down">↓ −3 vs Fév</div></div>
+  </div>
+  <div class="grid-2 mb18">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Tâches complétées par semaine</div></div>
+      <div style="padding:16px 20px">
+        <div style="display:flex;align-items:flex-end;gap:8px;height:100px">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:var(--surface2);height:55px;border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-muted)">S1</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:var(--surface2);height:70px;border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-muted)">S2</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:rgba(61,138,255,0.25);height:60px;border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-muted)">S3</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:rgba(79,255,176,0.25);height:90px;border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-muted)">S4</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:var(--surface2);height:48px;border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-muted)">S5</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:var(--surface2);height:65px;border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--text-muted)">S6</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><div style="width:100%;background:linear-gradient(180deg,var(--accent),var(--accent2));height:100px;border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--accent)">S7</div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:16px">
+          <span style="font-size:12px;color:var(--text-muted)">Moy : <strong style="color:var(--text)">18 tâches/sem</strong></span>
+          <span style="font-size:12px;color:var(--text-muted)">Max : <strong style="color:var(--accent)">27 tâches</strong></span>
+          <span style="font-size:12px;color:var(--text-muted)">Tendance : <strong style="color:var(--accent)">↑ Hausse</strong></span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Performance par membre</div></div>
+      <table class="tbl">
+        <thead><tr><th>Membre</th><th>Tâches</th><th>À temps</th><th>Score</th></tr></thead>
+        <tbody>
+          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:linear-gradient(135deg,#43e97b,#38f9d7)">HB</div><span style="font-size:13px">Hassan B.</span></div></td><td style="font-size:13px;color:var(--text-dim)">24</td><td><span class="badge b-green">96%</span></td><td style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent)">A+</td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:linear-gradient(135deg,#fa709a,#fee140)">YE</div><span style="font-size:13px">Youssef E.</span></div></td><td style="font-size:13px;color:var(--text-dim)">18</td><td><span class="badge b-green">94%</span></td><td style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent)">A</td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:linear-gradient(135deg,#667eea,#764ba2)">SA</div><span style="font-size:13px">Sofia A.</span></div></td><td style="font-size:13px;color:var(--text-dim)">31</td><td><span class="badge b-yellow">82%</span></td><td style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent4)">B+</td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><span style="font-size:13px">Karima T.</span></div></td><td style="font-size:13px;color:var(--text-dim)">38</td><td><span class="badge b-red">71%</span></td><td style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent3)">C</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="ai-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="ai-badge">✦ IA</span><span class="ai-title">Analyse de performance — Points d'amélioration</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div class="ai-insight"><span class="insight-ico">🔺</span><div class="insight-txt"><strong>Hassan & Youssef</strong> — performance excellente. Augmenter leur responsabilité sur les prochains sprints.</div></div>
+      <div class="ai-insight"><span class="insight-ico">⚠</span><div class="insight-txt"><strong>Karima</strong> — score en baisse à cause de la surcharge (138%). Solution = réallocation de tâches.</div></div>
+      <div class="ai-insight"><span class="insight-ico">🎯</span><div class="insight-txt">Objectif Q2 : Amener le taux de livraison à <strong>90%+</strong>. Focus sur Sprint planning et scope freeze.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 9 — NOTIFICATIONS
+     =================================================== -->
+<div id="view-notifications" class="view">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <div style="flex:1"><div class="section-title" style="margin:0">Notifications</div><div style="font-size:13px;color:var(--text-muted)">8 non lues</div></div>
+    <button class="btn btn-ghost btn-sm">Tout marquer lu</button>
+    <button class="btn btn-ghost btn-sm">Paramètres notifs ⚙</button>
+  </div>
+  <div class="grid-rl">
+    <div class="col-stack">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px">Non lues</div>
+      <div class="card">
+        <div class="notif-item unread"><div class="notif-ico" style="background:rgba(255,107,107,0.1)">⚠</div><div style="flex:1"><div class="notif-title">Délai critique — Application Mobile</div><div class="notif-desc">Livraison dans 11 jours. 3 tâches critiques toujours non assignées. Action requise.</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="notif-time">10 min</div><div class="unread-dot"></div></div></div>
+        <div class="notif-item unread"><div class="notif-ico" style="background:rgba(255,107,107,0.1)">👥</div><div style="flex:1"><div class="notif-title">Surcharge détectée — Karima Tahiri</div><div class="notif-desc">Charge à 138% cette semaine. L'IA recommande de réaffecter 2 tâches à Youssef El Amrani.</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="notif-time">1h</div><div class="unread-dot"></div></div></div>
+        <div class="notif-item unread"><div class="notif-ico" style="background:rgba(255,203,71,0.1)">💰</div><div style="flex:1"><div class="notif-title">Budget App Mobile dépassé</div><div class="notif-desc">Consommation à 108% (194 000 MAD / 180 000 MAD). Voir rapport budgétaire.</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="notif-time">2h</div><div class="unread-dot"></div></div></div>
+        <div class="notif-item unread"><div class="notif-ico" style="background:rgba(79,255,176,0.1)">✅</div><div style="flex:1"><div class="notif-title">Sprint #8 terminé avec succès</div><div class="notif-desc">Hassan Benjelloun a clôturé le sprint avec 24/25 tâches complétées. Rapport disponible.</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="notif-time">3h</div><div class="unread-dot"></div></div></div>
+        <div class="notif-item unread"><div class="notif-ico" style="background:rgba(61,138,255,0.1)">📋</div><div style="flex:1"><div class="notif-title">Nouveau commentaire — Refonte Site Web</div><div class="notif-desc">Client TechCorp : "Super progression sur la page d'accueil ! Quelques ajustements couleurs."</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="notif-time">4h</div><div class="unread-dot"></div></div></div>
+      </div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px;margin-top:6px">Lues</div>
+      <div class="card">
+        <div class="notif-item" style="opacity:0.65"><div class="notif-ico" style="background:rgba(79,255,176,0.08)">🎉</div><div style="flex:1"><div class="notif-title">Projet Dashboard Atlas livré</div><div class="notif-desc">Groupe Atlas a validé la livraison. Satisfaction 5/5.</div></div><div class="notif-time">Hier</div></div>
+        <div class="notif-item" style="opacity:0.65"><div class="notif-ico" style="background:rgba(167,139,250,0.08)">🔔</div><div style="flex:1"><div class="notif-title">Rappel — Réunion TechCorp demain</div><div class="notif-desc">Réunion de suivi Mar 4 Mars à 10h00 via Zoom.</div></div><div class="notif-time">Hier</div></div>
+        <div class="notif-item" style="opacity:0.65"><div class="notif-ico" style="background:rgba(255,203,71,0.08)">📊</div><div style="flex:1"><div class="notif-title">Rapport mensuel Fév 2025 généré</div><div class="notif-desc">Le rapport automatique IA est prêt. CA : 121 000 MAD.</div></div><div class="notif-time">1 Mar</div></div>
+      </div>
+    </div>
+    <div class="col-stack">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Préférences de notification</div></div>
+        <div style="padding:4px 0">
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Alertes délais critiques</div><div class="settings-desc">Notifier si < 7 jours avant échéance</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Surcharge ressources</div><div class="settings-desc">Alerte si charge > 100%</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Commentaires clients</div><div class="settings-desc">Nouveaux messages et retours</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Résumé quotidien IA</div><div class="settings-desc">Synthèse chaque matin à 8h</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Dépassements budgétaires</div><div class="settings-desc">Alerte si > 90% budget consommé</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Notifications email</div><div class="settings-desc">Envoyer par email également</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     VUE 10 — PARAMÈTRES
+     =================================================== -->
+<div id="view-parametres" class="view">
+  <div style="margin-bottom:20px"><div class="section-title">Paramètres du compte</div><div class="section-sub">Gérez votre profil, équipe et préférences</div></div>
+  <div class="grid-rl">
+    <div class="col-stack">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Profil utilisateur</div><button class="btn btn-ghost btn-sm">Modifier</button></div>
+        <div style="padding:20px;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border)">
+          <div class="av" style="width:56px;height:56px;font-size:18px;background:linear-gradient(135deg,#667eea,#764ba2)">SA</div>
+          <div>
+            <div style="font-size:16px;font-weight:600;margin-bottom:3px">Sofia Amrani</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:3px">sofia@nexus.ma</div>
+            <span class="badge b-purple">Chef de Projet Senior</span>
+          </div>
+        </div>
+        <div style="padding:4px 0">
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Nom complet</div></div><input class="settings-input" value="Sofia Amrani"></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Email</div></div><input class="settings-input" value="sofia@nexus.ma"></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Fuseau horaire</div></div><input class="settings-input" value="UTC+1 · Casablanca"></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Langue</div></div><input class="settings-input" value="Français (FR)"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Membres de l'équipe</div><button class="btn btn-primary btn-sm">＋ Inviter</button></div>
+        <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#667eea,#764ba2)">SA</div><div style="flex:1"><div class="res-name">Sofia Amrani <span style="font-size:10px;margin-left:6px;color:var(--accent)">Vous</span></div><div class="res-role">Chef de Projet</div></div><span class="badge b-purple">Admin</span></div>
+        <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#f093fb,#f5576c)">KT</div><div style="flex:1"><div class="res-name">Karima Tahiri</div><div class="res-role">Designer UX/UI</div></div><span class="badge b-blue">Membre</span></div>
+        <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">HB</div><div style="flex:1"><div class="res-name">Hassan Benjelloun</div><div class="res-role">Dev Frontend</div></div><span class="badge b-blue">Membre</span></div>
+        <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#fa709a,#fee140)">YE</div><div style="flex:1"><div class="res-name">Youssef El Amrani</div><div class="res-role">Dev Backend</div></div><span class="badge b-blue">Membre</span></div>
+        <div class="res-row"><div class="av" style="background:linear-gradient(135deg,#fccb90,#d57eeb)">NA</div><div style="flex:1"><div class="res-name">Nadia Alami</div><div class="res-role">Marketing</div></div><span class="badge b-blue">Membre</span></div>
+      </div>
+    </div>
+    <div class="col-stack">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Préférences</div></div>
+        <div style="padding:4px 0">
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Mode sombre</div><div class="settings-desc">Thème actuellement appliqué</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Résumé IA quotidien</div><div class="settings-desc">Insights automatiques chaque matin</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Prévisions intelligentes</div><div class="settings-desc">Prédictions délais et budgets</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Alertes automatiques</div><div class="settings-desc">Délais, surcharges, budgets</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Suivi du temps</div><div class="settings-desc">Enregistrer les heures par tâche</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Intégrations</div></div>
+        <div style="padding:4px 0">
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Slack</div><div class="settings-desc">Notifications dans vos canaux</div></div><div class="toggle on"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Google Drive</div><div class="settings-desc">Pièces jointes et livrables</div></div><div class="toggle on"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">GitHub</div><div class="settings-desc">Lier commits aux tâches dev</div></div><div class="toggle on"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Stripe</div><div class="settings-desc">Suivi paiements clients</div></div><div class="toggle"></div></div>
+          <div class="settings-row"><div class="settings-info"><div class="settings-label">Notion</div><div class="settings-desc">Synchroniser documentation</div></div><div class="toggle"></div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" style="flex:1">💾 Enregistrer les modifications</button>
+        <button class="btn btn-ghost">Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div><!-- /content -->
+</main>
+</div>
+
+<script>
+const titles = {
+  dashboard: 'Tableau de bord',
+  projets: 'Projets',
+  taches: 'Tâches',
+  calendrier: 'Calendrier',
+  ressources: 'Ressources',
+  rapports: 'Rapports IA',
+  budgets: 'Budgets',
+  performance: 'Performance',
+  notifications: 'Notifications',
+  parametres: 'Paramètres'
+};
+
+function switchView(name, clickedEl) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('pageTitle').textContent = titles[name] || name;
+  if (clickedEl) { clickedEl.classList.add('active'); return; }
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) n.classList.add('active');
+  });
+}
+</script>
+</body>
+</html>

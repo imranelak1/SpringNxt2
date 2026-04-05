@@ -1,158 +1,515 @@
 'use client';
-import { useState } from 'react';
-import TaskModal from '../TaskModal';
-import TaskDetailPanel from '../TaskDetailPanel';
 
-interface TaskInfo {
-    title: string;
-    tag: string;
-    tagCls: string;
-    status: string;
-    priority: string;
-    assignee: string;
-    assigneeInitials: string;
-    dueDate: string;
-    progress: number;
-    project: string;
+import { useEffect, useState } from 'react';
+import TaskDetailPanel from '../TaskDetailPanel';
+import TaskModal, { type TaskData } from '../TaskModal';
+import { createTask, deleteTask, getTasks, getUsers, getProjects, updateTask } from '../../lib/api';
+import type { AppRole, Task, UserSummary, Project } from '../../lib/types';
+
+interface TachesProps {
+  token: string;
+  role: AppRole;
 }
 
-const kanbanColumns = {
-    backlog: {
-        label: 'BACKLOG', dot: 'var(--text-muted)', count: 8,
-        tasks: [
-            { title: 'Audit accessibilité WCAG 2.1', tag: 'Analyse', tagCls: 'tt-dat', status: 'backlog', priority: 'Faible', assignee: 'Non assigné', assigneeInitials: '?', dueDate: 'Non planifié', progress: 0, project: 'Interne' },
-            { title: 'Refactoriser module notifications', tag: 'Dev', tagCls: 'tt-dev', status: 'backlog', priority: 'Moyenne', assignee: 'Non assigné', assigneeInitials: '?', dueDate: 'Non planifié', progress: 0, project: 'App Mobile' },
-            { title: 'Dark mode — composants secondaires', tag: 'Design', tagCls: 'tt-des', status: 'backlog', priority: 'Faible', assignee: 'Karima Tahiri', assigneeInitials: 'KT', dueDate: 'Non planifié', progress: 10, project: 'Design System' },
-        ],
-    },
-    todo: {
-        label: 'À FAIRE', dot: 'var(--accent4)', count: 6,
-        tasks: [
-            { title: 'Wireframes page d\'accueil v2', tag: 'Design', tagCls: 'tt-des', status: 'todo', priority: 'Moyenne', assignee: 'Karima Tahiri', assigneeInitials: 'KT', dueDate: '10 Mar', progress: 0, project: 'Refonte Site Web' },
-            { title: 'Setup CI/CD pipeline GitHub Actions', tag: 'Dev', tagCls: 'tt-dev', status: 'todo', priority: 'Moyenne', assignee: 'Youssef El Amrani', assigneeInitials: 'YE', dueDate: '12 Mar', progress: 0, project: 'App Mobile' },
-            { title: 'Créatives visuelles réseaux sociaux Q2', tag: 'Marketing', tagCls: 'tt-mkt', status: 'todo', priority: 'Moyenne', assignee: 'Nadia Alami', assigneeInitials: 'NA', dueDate: '12 Mar', progress: 0, project: 'Campagne Q2' },
-        ],
-    },
-    inprogress: {
-        label: 'EN COURS', dot: 'var(--accent2)', count: 5,
-        tasks: [
-            { title: 'Intégration API paiement Stripe', tag: 'Dev', tagCls: 'tt-dev', status: 'inprogress', priority: 'Critique', assignee: 'Hassan Benjelloun', assigneeInitials: 'HB', dueDate: '8 Mar', progress: 65, project: 'App Mobile' },
-            { title: 'Composants UI — bibliothèque interne', tag: 'Design', tagCls: 'tt-des', status: 'inprogress', priority: 'Moyenne', assignee: 'Karima Tahiri', assigneeInitials: 'KT', dueDate: 'En continu', progress: 55, project: 'Design System' },
-            { title: 'Géolocalisation temps réel utilisateurs', tag: 'Dev', tagCls: 'tt-dev', status: 'inprogress', priority: 'Haute', assignee: 'Youssef El Amrani', assigneeInitials: 'YE', dueDate: '14 Mar', progress: 30, project: 'App Mobile' },
-        ],
-    },
-    done: {
-        label: 'TERMINÉ', dot: 'var(--accent)', count: 14,
-        tasks: [
-            { title: 'Tests unitaires module authentification', tag: 'QA', tagCls: 'tt-qa', status: 'done', priority: 'Haute', assignee: 'Hassan Benjelloun', assigneeInitials: 'HB', dueDate: '2 Mar', progress: 100, project: 'App Mobile' },
-            { title: 'Charte graphique BrandMax finalisée', tag: 'Design', tagCls: 'tt-des', status: 'done', priority: 'Haute', assignee: 'Karima Tahiri', assigneeInitials: 'KT', dueDate: '1 Mar', progress: 100, project: 'Campagne Q2' },
-            { title: 'Audit SEO site TechCorp Maroc', tag: 'Analyse', tagCls: 'tt-dat', status: 'done', priority: 'Faible', assignee: 'Sofia Amrani', assigneeInitials: 'SA', dueDate: '28 Fév', progress: 100, project: 'Refonte Site Web' },
-        ],
-    },
-};
+type ViewMode = 'Kanban' | 'List';
 
-export default function Taches() {
-    const [viewMode, setViewMode] = useState('Kanban');
-    const [showTaskModal, setShowTaskModal] = useState(false);
-    const [selectedTask, setSelectedTask] = useState<TaskInfo | null>(null);
+const statusFilters = [
+  { label: 'All statuses', value: 'ALL' },
+  { label: 'Todo', value: 'TODO' },
+  { label: 'In Progress', value: 'IN_PROGRESS' },
+  { label: 'Blocked', value: 'BLOCKED' },
+  { label: 'Done', value: 'DONE' },
+];
 
-    return (
-        <div>
-            {showTaskModal && <TaskModal onClose={() => setShowTaskModal(false)} />}
-            {selectedTask && <TaskDetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />}
+const priorityFilters = [
+  { label: 'All priorities', value: 'ALL' },
+  { label: 'Low', value: 'LOW' },
+  { label: 'Medium', value: 'MEDIUM' },
+  { label: 'High', value: 'HIGH' },
+  { label: 'Critical', value: 'CRITICAL' },
+];
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-                <div style={{ flex: 1 }}>
-                    <div className="section-title" style={{ margin: 0 }}>Gestion des tâches</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>84 tâches · Sprint 9 · App Mobile</div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    {['Kanban', 'Liste'].map(m => <span key={m} className={`tag ${viewMode === m ? 'sel' : ''}`} onClick={() => setViewMode(m)}>{m}</span>)}
-                </div>
+function getPriorityBadge(priority: string) {
+  if (priority === 'CRITICAL') {
+    return 'pri-critical';
+  }
 
-                <div className="filter-bar" style={{ marginBottom: 0 }}>
-                    <select className="filter-select">
-                        <option>Tous les projets</option>
-                        <option>App Mobile</option>
-                        <option>Refonte Site Web</option>
-                    </select>
-                    <select className="filter-select">
-                        <option>Toutes priorités</option>
-                        <option>Critique</option>
-                        <option>Haute</option>
-                        <option>Moyenne</option>
-                    </select>
-                </div>
+  if (priority === 'HIGH') {
+    return 'pri-high';
+  }
 
-                <button className="btn btn-ghost btn-sm">Filtrer ▾</button>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowTaskModal(true)}>＋ Tâche</button>
-            </div>
+  if (priority === 'MEDIUM') {
+    return 'pri-medium';
+  }
 
-            {viewMode === 'Kanban' && (
-                <div className="kanban-grid">
-                    {Object.entries(kanbanColumns).map(([key, col]) => (
-                        <div key={key} className="kb-col">
-                            <div className="kb-header">
-                                <div className="kb-dot" style={{ background: col.dot }}></div>
-                                <div className="kb-title">{col.label}</div>
-                                <div className="kb-count">{col.count}</div>
-                                <button className="action-btn" style={{ padding: '2px 6px', fontSize: '14px', fontWeight: 700 }} onClick={() => setShowTaskModal(true)}>＋</button>
-                            </div>
-                            {col.tasks.map((t, i) => (
-                                <div key={i} className="task-card" style={{ borderColor: key === 'inprogress' ? 'rgba(61,138,255,0.2)' : '', opacity: key === 'done' ? 0.65 : 1 }} onClick={() => setSelectedTask(t)}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                                        <span className={`task-tag ${t.tagCls}`}>{t.tag}</span>
-                                        <span className={`pri-badge ${t.priority === 'Critique' ? 'pri-critical' : t.priority === 'Haute' ? 'pri-high' : t.priority === 'Moyenne' ? 'pri-medium' : 'pri-low'}`}>{t.priority}</span>
-                                    </div>
-                                    <div className="task-title">{t.title}</div>
-                                    {t.progress > 0 && t.progress < 100 && (
-                                        <div className="pbar-wrap" style={{ marginBottom: '8px' }}>
-                                            <div className="pbar"><div className="pfill" style={{ width: `${t.progress}%` }}></div></div>
-                                            <span className="ppct" style={{ fontSize: '10px' }}>{t.progress}%</span>
-                                        </div>
-                                    )}
-                                    <div className="task-footer">
-                                        <span className="task-due" style={{ color: t.dueDate.includes('Mar') && parseInt(t.dueDate) <= 10 ? 'var(--accent3)' : '' }}>
-                                            {key === 'done' ? `✓ ${t.dueDate}` : `📅 ${t.dueDate}`}
-                                        </span>
-                                        {t.assigneeInitials !== '?' && (
-                                            <div className="av" style={{ width: '22px', height: '22px', fontSize: '9px', background: 'linear-gradient(135deg,#43e97b,#38f9d7)' }}>{t.assigneeInitials}</div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-                </div>
-            )}
+  return 'pri-low';
+}
 
-            {viewMode === 'Liste' && (
-                <div className="card">
-                    <table className="tbl">
-                        <thead><tr><th>Tâche</th><th>Projet</th><th>Assigné</th><th>Priorité</th><th>Avancement</th><th>Échéance</th><th>Statut</th></tr></thead>
-                        <tbody>
-                            {Object.values(kanbanColumns).flatMap(col => col.tasks).map((t, i) => (
-                                <tr key={i} onClick={() => setSelectedTask(t)}>
-                                    <td style={{ fontSize: '13px', fontWeight: 500, maxWidth: '200px' }}>{t.title}</td>
-                                    <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t.project}</td>
-                                    <td>
-                                        {t.assigneeInitials !== '?' && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                                                <div className="av" style={{ width: '22px', height: '22px', fontSize: '9px', background: 'linear-gradient(135deg,#43e97b,#38f9d7)' }}>{t.assigneeInitials}</div>
-                                                <span style={{ fontSize: '12px' }}>{t.assignee.split(' ')[0]}</span>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td><span className={`pri-badge ${t.priority === 'Critique' ? 'pri-critical' : t.priority === 'Haute' ? 'pri-high' : t.priority === 'Moyenne' ? 'pri-medium' : 'pri-low'}`}>{t.priority}</span></td>
-                                    <td><div className="pbar-wrap"><div className="pbar" style={{ minWidth: '60px' }}><div className="pfill" style={{ width: `${t.progress}%` }}></div></div><span className="ppct">{t.progress}%</span></div></td>
-                                    <td style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{t.dueDate}</td>
-                                    <td><span className={`badge ${t.status === 'done' ? 'b-green' : t.status === 'inprogress' ? 'b-blue' : t.status === 'todo' ? 'b-yellow' : 'b-gray'}`}>{t.status === 'done' ? 'Terminé' : t.status === 'inprogress' ? 'En cours' : t.status === 'todo' ? 'À faire' : 'Backlog'}</span></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
+function getStatusBadge(status: string) {
+  if (status === 'DONE') {
+    return 'b-green';
+  }
+
+  if (status === 'IN_PROGRESS') {
+    return 'b-blue';
+  }
+
+  if (status === 'BLOCKED') {
+    return 'b-red';
+  }
+
+  return 'b-gray';
+}
+
+function estimateProgress(task: Task) {
+  if (task.status === 'DONE') {
+    return 100;
+  }
+
+  if (task.actualHours !== null && task.estimatedHours && task.estimatedHours > 0) {
+    return Math.min(100, Math.round((task.actualHours / task.estimatedHours) * 100));
+  }
+
+  if (task.status === 'IN_PROGRESS') {
+    return 50;
+  }
+
+  if (task.status === 'BLOCKED') {
+    return 35;
+  }
+
+  return 0;
+}
+
+function formatDueDate(value: string | null) {
+  if (!value) {
+    return 'No due date';
+  }
+
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value));
+}
+
+function getAssigneeInitials(email: string | null) {
+  if (!email) {
+    return '?';
+  }
+
+  return email
+    .split('@')[0]
+    .split(/[.\-_]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+export default function Taches({ token, role }: TachesProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>('Kanban');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedPriority, setSelectedPriority] = useState('ALL');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadTasks() {
+      setLoading(true);
+      setError('');
+
+      try {
+        const response = await getTasks(token, selectedStatus, selectedPriority);
+
+        if (isMounted) {
+          setTasks(response.content);
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load tasks.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadTasks();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedPriority, selectedStatus, token]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOptions() {
+      try {
+        const [projectsResponse, usersResponse] = await Promise.all([getProjects(token), getUsers(token)]);
+
+        if (isMounted) {
+          setProjects(projectsResponse.content);
+          setUsers(usersResponse);
+        }
+      } catch {
+        if (isMounted) {
+          setProjects([]);
+          setUsers([]);
+        }
+      }
+    }
+
+    if (role !== 'employee') {
+      void loadOptions();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [role, token]);
+
+  const handleCreateTask = async (task: TaskData) => {
+    const selectedProject = projects.find((project) => project.name === task.project);
+    const selectedAssignee = users.find(
+      (user) => `${user.firstName} ${user.lastName}` === task.assignee,
     );
+
+    if (!selectedProject) {
+      throw new Error('Please choose a valid project.');
+    }
+
+    const createdTask = await createTask(token, {
+      title: task.title,
+      description:
+        task.tags.length > 0 ? `${task.description}\n\nTags: ${task.tags.join(', ')}` : task.description,
+      status:
+        task.status === 'inprogress'
+          ? 'IN_PROGRESS'
+          : task.status === 'blocked'
+            ? 'BLOCKED'
+            : task.status === 'done'
+              ? 'DONE'
+              : 'TODO',
+      priority: task.priority.toUpperCase(),
+      startDate: null,
+      dueDate: task.dueDate || null,
+      estimatedHours: null,
+      actualHours: task.progress > 0 ? task.progress : null,
+      projectId: selectedProject.id,
+      assigneeId: selectedAssignee?.id ?? null,
+    });
+
+    setTasks((current) => [createdTask, ...current]);
+  };
+
+  const handleUpdateTask = async (taskData: TaskData) => {
+    if (!editingTask) {
+      return;
+    }
+
+    const selectedProject = projects.find((project) => project.name === taskData.project);
+    const selectedAssignee = users.find(
+      (user) => `${user.firstName} ${user.lastName}` === taskData.assignee,
+    );
+
+    if (!selectedProject) {
+      throw new Error('Please choose a valid project.');
+    }
+
+    const updatedTask = await updateTask(token, editingTask.id, {
+      title: taskData.title,
+      description:
+        taskData.tags.length > 0
+          ? `${taskData.description}\n\nTags: ${taskData.tags.join(', ')}`
+          : taskData.description,
+      status:
+        taskData.status === 'inprogress'
+          ? 'IN_PROGRESS'
+          : taskData.status === 'blocked'
+            ? 'BLOCKED'
+            : taskData.status === 'done'
+              ? 'DONE'
+              : 'TODO',
+      priority: taskData.priority.toUpperCase(),
+      startDate: editingTask.startDate,
+      dueDate: taskData.dueDate || null,
+      estimatedHours: editingTask.estimatedHours,
+      actualHours: taskData.progress > 0 ? taskData.progress : null,
+      projectId: selectedProject.id,
+      assigneeId: selectedAssignee?.id ?? null,
+    });
+
+    setTasks((current) => current.map((task) => (task.id === updatedTask.id ? updatedTask : task)));
+    setEditingTask(null);
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    await deleteTask(token, taskId);
+    setTasks((current) => current.filter((task) => task.id !== taskId));
+    setSelectedTask((current) => (current?.id === taskId ? null : current));
+  };
+
+  const groupedTasks = {
+    TODO: tasks.filter((task) => task.status === 'TODO'),
+    IN_PROGRESS: tasks.filter((task) => task.status === 'IN_PROGRESS'),
+    BLOCKED: tasks.filter((task) => task.status === 'BLOCKED'),
+    DONE: tasks.filter((task) => task.status === 'DONE'),
+  };
+
+  if (loading) {
+    return <div className="card"><div className="card-body">Loading tasks...</div></div>;
+  }
+
+  if (error) {
+    return <div className="card"><div className="card-body">Tasks error: {error}</div></div>;
+  }
+
+  return (
+    <div>
+      {showTaskModal ? (
+        <TaskModal
+          onClose={() => setShowTaskModal(false)}
+          onSave={handleCreateTask}
+          projects={projects.map((project) => project.name)}
+          members={users.map((user) => `${user.firstName} ${user.lastName}`)}
+        />
+      ) : null}
+      {editingTask ? (
+        <TaskModal
+          mode="edit"
+          initial={{
+            title: editingTask.title,
+            description: editingTask.description,
+            project: editingTask.projectName ?? '',
+            assignee:
+              users.find((user) => user.id === editingTask.assigneeId)
+                ? `${users.find((user) => user.id === editingTask.assigneeId)?.firstName ?? ''} ${users.find((user) => user.id === editingTask.assigneeId)?.lastName ?? ''}`.trim()
+                : '',
+            dueDate: editingTask.dueDate ?? '',
+            priority: editingTask.priority.toLowerCase(),
+            status:
+              editingTask.status === 'IN_PROGRESS'
+                ? 'inprogress'
+                : editingTask.status === 'BLOCKED'
+                  ? 'blocked'
+                  : editingTask.status === 'DONE'
+                    ? 'done'
+                    : 'todo',
+            progress: estimateProgress(editingTask),
+            tags: [],
+          }}
+          onClose={() => setEditingTask(null)}
+          onSave={handleUpdateTask}
+          projects={projects.map((project) => project.name)}
+          members={users.map((user) => `${user.firstName} ${user.lastName}`)}
+        />
+      ) : null}
+      {selectedTask ? (
+        <TaskDetailPanel
+          task={{
+            title: selectedTask.title,
+            tag: selectedTask.projectName ?? 'Task',
+            tagCls: 'tt-dev',
+            status: selectedTask.status,
+            priority: selectedTask.priority,
+            assignee: selectedTask.assigneeEmail ?? 'Unassigned',
+            assigneeInitials: getAssigneeInitials(selectedTask.assigneeEmail),
+            dueDate: formatDueDate(selectedTask.dueDate),
+            progress: estimateProgress(selectedTask),
+            project: selectedTask.projectName ?? 'No project',
+          }}
+          onClose={() => setSelectedTask(null)}
+        />
+      ) : null}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+        <div style={{ flex: 1 }}>
+          <div className="section-title" style={{ margin: 0 }}>
+            Task delivery board
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            {tasks.length} tasks loaded from the backend
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {(['Kanban', 'List'] as ViewMode[]).map((mode) => (
+            <span
+              key={mode}
+              className={`tag ${viewMode === mode ? 'sel' : ''}`}
+              onClick={() => setViewMode(mode)}
+            >
+              {mode}
+            </span>
+          ))}
+        </div>
+
+        <div className="filter-bar" style={{ marginBottom: 0 }}>
+          <select
+            className="filter-select"
+            value={selectedStatus}
+            onChange={(event) => setSelectedStatus(event.target.value)}
+          >
+            {statusFilters.map((filter) => (
+              <option key={filter.value} value={filter.value}>
+                {filter.label}
+              </option>
+            ))}
+          </select>
+          <select
+            className="filter-select"
+            value={selectedPriority}
+            onChange={(event) => setSelectedPriority(event.target.value)}
+          >
+            {priorityFilters.map((filter) => (
+              <option key={filter.value} value={filter.value}>
+                {filter.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => setShowTaskModal(true)}
+          disabled={role === 'employee'}
+        >
+          New Task
+        </button>
+      </div>
+
+      {viewMode === 'Kanban' ? (
+        <div className="kanban-grid">
+          {Object.entries(groupedTasks).map(([status, columnTasks]) => (
+            <div key={status} className="kb-col">
+              <div className="kb-header">
+                <div className="kb-dot" style={{ background: status === 'DONE' ? 'var(--accent)' : status === 'IN_PROGRESS' ? 'var(--accent2)' : status === 'BLOCKED' ? 'var(--accent3)' : 'var(--text-muted)' }}></div>
+                <div className="kb-title">{status.replace('_', ' ')}</div>
+                <div className="kb-count">{columnTasks.length}</div>
+              </div>
+              {columnTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="task-card"
+                  onClick={() => setSelectedTask(task)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                    <span className="task-tag tt-dev">{task.projectName ?? 'Task'}</span>
+                    <span className={`pri-badge ${getPriorityBadge(task.priority)}`}>{task.priority}</span>
+                  </div>
+                  <div className="task-title">{task.title}</div>
+                  <div className="pbar-wrap" style={{ marginBottom: '8px' }}>
+                    <div className="pbar">
+                      <div className="pfill" style={{ width: `${estimateProgress(task)}%` }}></div>
+                    </div>
+                    <span className="ppct" style={{ fontSize: '10px' }}>
+                      {estimateProgress(task)}%
+                    </span>
+                  </div>
+                  <div className="task-footer">
+                    <span className="task-due">{formatDueDate(task.dueDate)}</span>
+                    <div
+                      className="av"
+                      style={{
+                        width: '22px',
+                        height: '22px',
+                        fontSize: '9px',
+                        background: 'linear-gradient(135deg,#43e97b,#38f9d7)',
+                      }}
+                    >
+                      {getAssigneeInitials(task.assigneeEmail)}
+                    </div>
+                  </div>
+                  {role !== 'employee' ? (
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+                      <button
+                        className="action-btn"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditingTask(task);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="action-btn action-btn-danger"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleDeleteTask(task.id);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="card">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Project</th>
+                <th>Assignee</th>
+                <th>Priority</th>
+                <th>Progress</th>
+                <th>Due</th>
+                <th>Status</th>
+                {role !== 'employee' ? <th>Actions</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.map((task) => (
+                <tr key={task.id} onClick={() => setSelectedTask(task)}>
+                  <td style={{ fontSize: '13px', fontWeight: 500, maxWidth: '240px' }}>{task.title}</td>
+                  <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{task.projectName ?? 'No project'}</td>
+                  <td style={{ fontSize: '12px' }}>{task.assigneeEmail ?? 'Unassigned'}</td>
+                  <td>
+                    <span className={`pri-badge ${getPriorityBadge(task.priority)}`}>{task.priority}</span>
+                  </td>
+                  <td>
+                    <div className="pbar-wrap">
+                      <div className="pbar" style={{ minWidth: '60px' }}>
+                        <div className="pfill" style={{ width: `${estimateProgress(task)}%` }}></div>
+                      </div>
+                      <span className="ppct">{estimateProgress(task)}%</span>
+                    </div>
+                  </td>
+                  <td style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{formatDueDate(task.dueDate)}</td>
+                  <td>
+                    <span className={`badge ${getStatusBadge(task.status)}`}>{task.status}</span>
+                  </td>
+                  {role !== 'employee' ? (
+                    <td onClick={(event) => event.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button className="action-btn" onClick={() => setEditingTask(task)}>
+                          Edit
+                        </button>
+                        <button
+                          className="action-btn action-btn-danger"
+                          onClick={() => void handleDeleteTask(task.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }

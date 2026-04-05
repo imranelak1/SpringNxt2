@@ -1,0 +1,7 @@
+.vscode/
+*.log
+*.err.log
+backend/data/*.mv.db
+backend/data/*.trace.db
+backend/backend-dev.*
+my-app/frontend-dev.*

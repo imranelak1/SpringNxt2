@@ -13,6 +13,24 @@
   --text: #e8eaf0;
   --text-muted: #6b7280;
   --text-dim: #9ca3af;
+  --glow1: rgba(79, 255, 176, 0.04);
+  --glow2: rgba(61, 138, 255, 0.05);
+  --topbar-bg: rgba(10, 12, 16, 0.7);
+}
+
+[data-theme='light'] {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface2: #eef2f8;
+  --surface3: #e4ebf4;
+  --border: rgba(14, 22, 38, 0.12);
+  --border2: rgba(14, 22, 38, 0.2);
+  --text: #121826;
+  --text-muted: #5b6475;
+  --text-dim: #475063;
+  --glow1: rgba(79, 255, 176, 0.08);
+  --glow2: rgba(61, 138, 255, 0.08);
+  --topbar-bg: rgba(255, 255, 255, 0.78);
 }
 
 * {
@@ -38,8 +56,8 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse 800px 600px at 10% 20%, rgba(79, 255, 176, 0.04) 0%, transparent 70%),
-    radial-gradient(ellipse 600px 500px at 85% 70%, rgba(61, 138, 255, 0.05) 0%, transparent 70%);
+  background: radial-gradient(ellipse 800px 600px at 10% 20%, var(--glow1) 0%, transparent 70%),
+    radial-gradient(ellipse 600px 500px at 85% 70%, var(--glow2) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -244,7 +262,7 @@ body::before {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: rgba(10, 12, 16, 0.7);
+  background: var(--topbar-bg);
   backdrop-filter: blur(10px);
 }
 

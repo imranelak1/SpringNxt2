@@ -1,159 +1,325 @@
 'use client';
-import { useState } from 'react';
-import UserModal from '../UserModal';
 
-interface User {
-    id: number;
-    name: string;
-    initials: string;
-    email: string;
-    role: 'admin' | 'pm' | 'employee';
-    status: 'active' | 'inactive';
-    lastLogin: string;
-    avatarGrad: string;
-    projects: number;
+import { useEffect, useMemo, useState } from 'react';
+import UserModal, { type UserFormData } from '../UserModal';
+import { createUser, deleteUser, getUsers, updateUser } from '../../lib/api';
+import type { UserSummary } from '../../lib/types';
+
+interface UtilisateursProps {
+  token: string;
 }
 
-const roleLabel: Record<string, string> = { admin: 'Administrateur', pm: 'Chef de Projet', employee: 'Employé' };
-const roleBadge: Record<string, string> = { admin: 'b-red', pm: 'b-purple', employee: 'b-blue' };
+const roleLabel: Record<string, string> = {
+  ADMIN: 'Administrator',
+  MANAGER: 'Project Manager',
+  EMPLOYEE: 'Employee',
+};
 
-const initialUsers: User[] = [
-    { id: 1, name: 'Sofia Amrani', initials: 'SA', email: 'sofia@nexus.ma', role: 'admin', status: 'active', lastLogin: 'Auj. 10:32', avatarGrad: 'linear-gradient(135deg,#667eea,#764ba2)', projects: 5 },
-    { id: 2, name: 'Karima Tahiri', initials: 'KT', email: 'karima@nexus.ma', role: 'pm', status: 'active', lastLogin: 'Auj. 09:14', avatarGrad: 'linear-gradient(135deg,#f093fb,#f5576c)', projects: 3 },
-    { id: 3, name: 'Hassan Benjelloun', initials: 'HB', email: 'hassan@nexus.ma', role: 'employee', status: 'active', lastLogin: 'Hier 18:22', avatarGrad: 'linear-gradient(135deg,#43e97b,#38f9d7)', projects: 2 },
-    { id: 4, name: 'Youssef El Amrani', initials: 'YE', email: 'youssef@nexus.ma', role: 'employee', status: 'active', lastLogin: 'Hier 16:07', avatarGrad: 'linear-gradient(135deg,#fa709a,#fee140)', projects: 2 },
-    { id: 5, name: 'Nadia Alami', initials: 'NA', email: 'nadia@nexus.ma', role: 'employee', status: 'active', lastLogin: 'Mar 02 Mar', avatarGrad: 'linear-gradient(135deg,#fccb90,#d57eeb)', projects: 1 },
-    { id: 6, name: 'Imrane Khalifa', initials: 'IK', email: 'imrane@nexus.ma', role: 'pm', status: 'inactive', lastLogin: 'Il y a 12j', avatarGrad: 'linear-gradient(135deg,#4facfe,#00f2fe)', projects: 0 },
-];
+const roleBadge: Record<string, string> = {
+  ADMIN: 'b-red',
+  MANAGER: 'b-purple',
+  EMPLOYEE: 'b-blue',
+};
 
-const activityLog = [
-    { user: 'Sofia Amrani', action: 'a créé le projet "Portail RH"', time: 'Il y a 5 min' },
-    { user: 'Hassan Benjelloun', action: 's\'est connecté', time: 'Il y a 1h' },
-    { user: 'Sofia Amrani', action: 'a modifié les droits de Nadia Alami', time: 'Hier 14:30' },
-    { user: 'Karima Tahiri', action: 'a invité un nouvel utilisateur', time: 'Hier 10:12' },
-    { user: 'Système', action: 'Tentative de connexion échouée (×3) — imrane@nexus.ma', time: '2 Mar 22:05' },
-];
+function getInitials(firstName: string, lastName: string) {
+  return `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
+}
 
-export default function Utilisateurs() {
-    const [users, setUsers] = useState<User[]>(initialUsers);
-    const [showModal, setShowModal] = useState(false);
-    const [filterRole, setFilterRole] = useState('all');
-    const [search, setSearch] = useState('');
+function formatDate(dateValue: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(dateValue));
+}
 
-    const filtered = users.filter(u => {
-        const roleOk = filterRole === 'all' || u.role === filterRole;
-        const searchOk = search === '' || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
-        return roleOk && searchOk;
+export default function Utilisateurs({ token }: UtilisateursProps) {
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [filterRole, setFilterRole] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadUsers() {
+      setLoading(true);
+      setError('');
+
+      try {
+        const response = await getUsers(token);
+
+        if (isMounted) {
+          setUsers(response);
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load users.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
+
+  const filteredUsers = useMemo(
+    () =>
+      users.filter((user) => {
+        const matchesRole = filterRole === 'ALL' || user.role === filterRole;
+        const matchesSearch =
+          search.trim() === '' ||
+          `${user.firstName} ${user.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+          user.email.toLowerCase().includes(search.toLowerCase());
+
+        return matchesRole && matchesSearch;
+      }),
+    [filterRole, search, users],
+  );
+
+  const handleCreateUser = async (user: UserFormData) => {
+    const [firstName = '', ...rest] = user.name.trim().split(' ');
+    const lastName = rest.join(' ').trim();
+
+    if (!firstName || !lastName) {
+      throw new Error('Please enter first and last name.');
+    }
+
+    const createdUser = await createUser(token, {
+      firstName,
+      lastName,
+      email: user.email,
+      password: user.password,
+      role: user.role === 'admin' ? 'ADMIN' : user.role === 'pm' ? 'MANAGER' : 'EMPLOYEE',
     });
 
-    const toggleStatus = (id: number) => {
-        setUsers(us => us.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
-    };
+    setUsers((current) => [createdUser, ...current]);
+  };
 
-    return (
-        <div>
-            {showModal && <UserModal onClose={() => setShowModal(false)} />}
+  const handleUpdateUser = async (user: UserFormData) => {
+    if (!editingUser) {
+      return;
+    }
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-                <div style={{ flex: 1 }}>
-                    <div className="section-title" style={{ margin: 0 }}>Gestion des utilisateurs</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{users.filter(u => u.status === 'active').length} actifs · {users.length} total</div>
-                </div>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>＋ Inviter un utilisateur</button>
-            </div>
+    const [firstName = '', ...rest] = user.name.trim().split(' ');
+    const lastName = rest.join(' ').trim();
 
-            {/* Stats */}
-            <div className="stats-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-                <div className="stat-card sc1"><div className="stat-lbl">Admins</div><div className="stat-val">{users.filter(u => u.role === 'admin').length}</div></div>
-                <div className="stat-card sc2"><div className="stat-lbl">Chefs de projet</div><div className="stat-val">{users.filter(u => u.role === 'pm').length}</div></div>
-                <div className="stat-card sc3"><div className="stat-lbl">Employés</div><div className="stat-val">{users.filter(u => u.role === 'employee').length}</div></div>
-            </div>
+    if (!firstName || !lastName) {
+      throw new Error('Please enter first and last name.');
+    }
 
-            <div className="grid-lr">
-                <div>
-                    {/* Filter bar */}
-                    <div className="filter-bar">
-                        <div className="filter-search">
-                            <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>⌕</span>
-                            <input placeholder="Rechercher un utilisateur..." value={search} onChange={e => setSearch(e.target.value)} />
-                        </div>
-                        <select className="filter-select" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
-                            <option value="all">Tous les rôles</option>
-                            <option value="admin">Administrateurs</option>
-                            <option value="pm">Chefs de projet</option>
-                            <option value="employee">Employés</option>
-                        </select>
-                    </div>
+    const updatedUser = await updateUser(token, editingUser.id, {
+      firstName,
+      lastName,
+      email: user.email,
+      password: user.password,
+      role: user.role === 'admin' ? 'ADMIN' : user.role === 'pm' ? 'MANAGER' : 'EMPLOYEE',
+    });
 
-                    <div className="card">
-                        <table className="tbl">
-                            <thead>
-                                <tr>
-                                    <th>Utilisateur</th>
-                                    <th>Rôle</th>
-                                    <th>Projets</th>
-                                    <th>Dernière connexion</th>
-                                    <th>Statut</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map(u => (
-                                    <tr key={u.id}>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <div className="av" style={{ background: u.avatarGrad }}>{u.initials}</div>
-                                                <div>
-                                                    <div style={{ fontSize: '13px', fontWeight: 500 }}>{u.name}</div>
-                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{u.email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td><span className={`badge ${roleBadge[u.role]}`}>{roleLabel[u.role]}</span></td>
-                                        <td><span style={{ fontSize: '13px', color: 'var(--text-dim)' }}>{u.projects}</span></td>
-                                        <td><span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.lastLogin}</span></td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <span className={`user-status-dot ${u.status === 'active' ? 'us-active' : 'us-inactive'}`}></span>
-                                                <span style={{ fontSize: '12px' }}>{u.status === 'active' ? 'Actif' : 'Inactif'}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                                <button className="action-btn">✏ Modifier</button>
-                                                <button className={`action-btn ${u.status === 'active' ? 'action-btn-danger' : ''}`} onClick={() => toggleStatus(u.id)}>
-                                                    {u.status === 'active' ? '🔒 Désactiver' : '🔓 Activer'}
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    setUsers((current) => current.map((item) => (item.id === updatedUser.id ? updatedUser : item)));
+    setEditingUser(null);
+  };
 
-                {/* Activity log */}
-                <div className="col-stack">
-                    <div className="card">
-                        <div className="card-header"><div className="card-title">Journal d'activité</div><span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Temps réel</span></div>
-                        {activityLog.map((a, i) => (
-                            <div key={i} className="tl-item">
-                                <div className="tl-dot" style={{ background: a.user === 'Système' ? 'var(--accent3)' : 'var(--accent2)' }}></div>
-                                <div style={{ flex: 1 }}>
-                                    <div className="tl-title"><strong>{a.user}</strong> {a.action}</div>
-                                </div>
-                                <div className="tl-time">{a.time}</div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="ai-card">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><span className="ai-badge">✦ IA</span><span className="ai-title">Analyse RBAC</span></div>
-                        <div className="ai-insight"><span className="insight-ico">🛡</span><div className="insight-txt">1 tentative de connexion échouée détectée. Compte Imrane K. en surveillance.</div></div>
-                        <div className="ai-insight"><span className="insight-ico">📊</span><div className="insight-txt">Karima Tahiri est à 138% de charge. Suggère redistribution avant ajout de tâches.</div></div>
-                    </div>
-                </div>
-            </div>
+  const handleDeleteUser = async (userId: number) => {
+    await deleteUser(token, userId);
+    setUsers((current) => current.filter((user) => user.id !== userId));
+  };
+
+  if (loading) {
+    return <div className="card"><div className="card-body">Loading users...</div></div>;
+  }
+
+  if (error) {
+    return <div className="card"><div className="card-body">Users error: {error}</div></div>;
+  }
+
+  return (
+    <div>
+      {showModal ? <UserModal onClose={() => setShowModal(false)} onSave={handleCreateUser} /> : null}
+      {editingUser ? (
+        <UserModal
+          mode="edit"
+          initial={{
+            name: `${editingUser.firstName} ${editingUser.lastName}`,
+            email: editingUser.email,
+            role:
+              editingUser.role === 'ADMIN'
+                ? 'admin'
+                : editingUser.role === 'MANAGER'
+                  ? 'pm'
+                  : 'employee',
+          }}
+          onClose={() => setEditingUser(null)}
+          onSave={handleUpdateUser}
+        />
+      ) : null}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+        <div style={{ flex: 1 }}>
+          <div className="section-title" style={{ margin: 0 }}>
+            User management
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            {users.filter((user) => user.enabled).length} enabled, {users.length} total
+          </div>
         </div>
-    );
+        <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+          Invite user
+        </button>
+      </div>
+
+      <div className="stats-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+        <div className="stat-card sc1">
+          <div className="stat-lbl">Admins</div>
+          <div className="stat-val">{users.filter((user) => user.role === 'ADMIN').length}</div>
+        </div>
+        <div className="stat-card sc2">
+          <div className="stat-lbl">Project managers</div>
+          <div className="stat-val">{users.filter((user) => user.role === 'MANAGER').length}</div>
+        </div>
+        <div className="stat-card sc3">
+          <div className="stat-lbl">Employees</div>
+          <div className="stat-val">{users.filter((user) => user.role === 'EMPLOYEE').length}</div>
+        </div>
+      </div>
+
+      <div className="grid-lr">
+        <div>
+          <div className="filter-bar">
+            <div className="filter-search">
+              <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>[]</span>
+              <input
+                placeholder="Search a user..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+            <select
+              className="filter-select"
+              value={filterRole}
+              onChange={(event) => setFilterRole(event.target.value)}
+            >
+              <option value="ALL">All roles</option>
+              <option value="ADMIN">Administrators</option>
+              <option value="MANAGER">Project managers</option>
+              <option value="EMPLOYEE">Employees</option>
+            </select>
+          </div>
+
+          <div className="card">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Created</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          className="av"
+                          style={{ background: 'linear-gradient(135deg,#667eea,#764ba2)' }}
+                        >
+                          {getInitials(user.firstName, user.lastName)}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 500 }}>
+                            {user.firstName} {user.lastName}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {user.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`badge ${roleBadge[user.role] ?? 'b-gray'}`}>
+                        {roleLabel[user.role] ?? user.role}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {formatDate(user.createdAt)}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span
+                          className={`user-status-dot ${user.enabled ? 'us-active' : 'us-inactive'}`}
+                        ></span>
+                        <span style={{ fontSize: '12px' }}>
+                          {user.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button className="action-btn" onClick={() => setEditingUser(user)}>
+                          Edit
+                        </button>
+                        <button
+                          className="action-btn action-btn-danger"
+                          onClick={() => void handleDeleteUser(user.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="col-stack">
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title">Live summary</div>
+            </div>
+            <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="ai-insight">
+                <span className="insight-ico">1.</span>
+                <div className="insight-txt">
+                  <strong>{users.length}</strong> users loaded from <strong>/api/users</strong>.
+                </div>
+              </div>
+              <div className="ai-insight">
+                <span className="insight-ico">2.</span>
+                <div className="insight-txt">
+                  <strong>{users.filter((user) => user.enabled).length}</strong> accounts are enabled.
+                </div>
+              </div>
+              <div className="ai-insight">
+                <span className="insight-ico">3.</span>
+                <div className="insight-txt">
+                  Most common role:{' '}
+                  <strong>
+                    {users.filter((user) => user.role === 'EMPLOYEE').length >=
+                    users.filter((user) => user.role === 'MANAGER').length
+                      ? 'Employee'
+                      : 'Project Manager'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -1,22 +1,9 @@
-import type { Metadata } from "next";
-import { Syne, DM_Sans } from "next/font/google";
-import "./globals.css";
-
-const syne = Syne({
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
-  variable: "--font-syne",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  variable: "--font-dm-sans",
-});
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Nexus — Plateforme Intelligente de Gestion",
-  description: "Plateforme de gestion de projets intelligente avec IA",
+  title: 'Nexus - Plateforme Intelligente de Gestion',
+  description: 'Plateforme de gestion de projets intelligente avec backend Spring',
 };
 
 export default function RootLayout({
@@ -26,9 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${syne.variable} ${dmSans.variable}`}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -1,123 +1,286 @@
 'use client';
-import { useState } from 'react';
 
-export default function Projets() {
-    const [filter, setFilter] = useState('Tous');
-    const tags = ['Tous', 'En cours', 'En révision', 'Livré', 'En pause'];
+import { useEffect, useState } from 'react';
+import ProjectModal, { type ProjectData } from '../ProjectModal';
+import { createProject, deleteProject, getProjects, updateProject } from '../../lib/api';
+import type { AppRole, Project } from '../../lib/types';
 
-    return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <div style={{ flex: 1 }}>
-                    <div className="section-title" style={{ margin: 0 }}>Tous les projets</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>12 projets · 3 clients · 5 membres</div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {tags.map(t => (
-                        <span key={t} className={`tag ${filter === t ? 'sel' : ''}`} onClick={() => setFilter(t)}>{t}</span>
-                    ))}
-                </div>
-                <button className="btn btn-primary btn-sm">＋ Nouveau projet</button>
-            </div>
+interface ProjetsProps {
+  token: string;
+  role: AppRole;
+}
 
-            <div className="grid-3 mb18">
-                {/* Card 1 */}
-                <div className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')} onMouseLeave={e => (e.currentTarget.style.transform = '')}>
-                    <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                            <div style={{ width: '38px', height: '38px', background: 'rgba(79,255,176,0.1)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🌐</div>
-                            <div><div style={{ fontSize: '14px', fontWeight: 600 }}>Refonte Site Web</div><div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>TechCorp Maroc</div></div>
-                            <span className="badge b-green" style={{ marginLeft: 'auto' }}>En cours</span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: '12px' }}>Refonte complète du site institutionnel avec nouveau CMS, optimisation SEO et intégration blog.</div>
-                        <div className="pbar-wrap"><div className="pbar" style={{ height: '7px' }}><div className="pfill" style={{ width: '72%' }}></div></div><span className="ppct" style={{ fontSize: '13px', fontWeight: 600 }}>72%</span></div>
-                    </div>
-                    <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="team-stack"><div className="av" style={{ background: 'linear-gradient(135deg,#667eea,#764ba2)' }}>SA</div><div className="av" style={{ background: 'linear-gradient(135deg,#f093fb,#f5576c)' }}>KT</div><div className="av" style={{ background: 'linear-gradient(135deg,#4facfe,#00f2fe)' }}>MR</div></div>
-                        <div style={{ flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>Échéance : <span style={{ color: 'var(--text)' }}>28 Mar</span></div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Budget : <span style={{ color: 'var(--accent4)' }}>68% utilisé</span></div>
-                    </div>
-                </div>
+const filters = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Active', value: 'ACTIVE' },
+  { label: 'Planning', value: 'PLANNING' },
+  { label: 'On Hold', value: 'ON_HOLD' },
+  { label: 'Completed', value: 'COMPLETED' },
+];
 
-                {/* Card 2 */}
-                <div className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')} onMouseLeave={e => (e.currentTarget.style.transform = '')}>
-                    <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                            <div style={{ width: '38px', height: '38px', background: 'rgba(61,138,255,0.1)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📱</div>
-                            <div><div style={{ fontSize: '14px', fontWeight: 600 }}>Application Mobile</div><div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>StartupX</div></div>
-                            <span className="badge b-yellow" style={{ marginLeft: 'auto' }}>En révision</span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: '12px' }}>App React Native iOS/Android avec auth, paiement Stripe, géolocalisation et notifications push.</div>
-                        <div className="pbar-wrap"><div className="pbar" style={{ height: '7px' }}><div className="pfill" style={{ width: '89%' }}></div></div><span className="ppct" style={{ fontSize: '13px', fontWeight: 600 }}>89%</span></div>
-                    </div>
-                    <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="team-stack"><div className="av" style={{ background: 'linear-gradient(135deg,#43e97b,#38f9d7)' }}>HB</div><div className="av" style={{ background: 'linear-gradient(135deg,#fa709a,#fee140)' }}>YE</div></div>
-                        <div style={{ flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>Échéance : <span style={{ color: 'var(--accent3)' }}>15 Mar ⚠</span></div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Budget : <span style={{ color: 'var(--accent3)' }}>94% utilisé</span></div>
-                    </div>
-                </div>
+function formatDate(value: string | null) {
+  if (!value) {
+    return 'Not set';
+  }
 
-                {/* Card 3 */}
-                <div className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')} onMouseLeave={e => (e.currentTarget.style.transform = '')}>
-                    <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                            <div style={{ width: '38px', height: '38px', background: 'rgba(255,203,71,0.1)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📣</div>
-                            <div><div style={{ fontSize: '14px', fontWeight: 600 }}>Campagne Q2 2025</div><div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>BrandMax</div></div>
-                            <span className="badge b-green" style={{ marginLeft: 'auto' }}>En cours</span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: '12px' }}>Stratégie digitale 360° : social media, SEA, emailing, brand awareness Q2.</div>
-                        <div className="pbar-wrap"><div className="pbar" style={{ height: '7px' }}><div className="pfill" style={{ width: '34%' }}></div></div><span className="ppct" style={{ fontSize: '13px', fontWeight: 600 }}>34%</span></div>
-                    </div>
-                    <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="team-stack"><div className="av" style={{ background: 'linear-gradient(135deg,#f093fb,#f5576c)' }}>NA</div><div className="av" style={{ background: 'linear-gradient(135deg,#667eea,#764ba2)' }}>IK</div><div className="av" style={{ background: 'linear-gradient(135deg,#fccb90,#d57eeb)' }}>LM</div></div>
-                        <div style={{ flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>Échéance : <span style={{ color: 'var(--text)' }}>12 Avr</span></div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Budget : <span style={{ color: 'var(--accent4)' }}>34% utilisé</span></div>
-                    </div>
-                </div>
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value));
+}
 
-                {/* Card 4 */}
-                <div className="card" style={{ cursor: 'pointer', transition: 'all 0.2s', opacity: 0.8 }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.opacity = '1'; }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.opacity = '0.8'; }}>
-                    <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                            <div style={{ width: '38px', height: '38px', background: 'rgba(167,139,250,0.1)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🎨</div>
-                            <div><div style={{ fontSize: '14px', fontWeight: 600 }}>Design System</div><div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Interne</div></div>
-                            <span className="badge b-gray" style={{ marginLeft: 'auto' }}>En pause</span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: '12px' }}>Bibliothèque de composants UI, tokens design, documentation Storybook.</div>
-                        <div className="pbar-wrap"><div className="pbar" style={{ height: '7px' }}><div className="pfill" style={{ width: '55%', background: 'linear-gradient(90deg,var(--accent5),var(--accent2))' }}></div></div><span className="ppct" style={{ fontSize: '13px', fontWeight: 600 }}>55%</span></div>
-                    </div>
-                    <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="team-stack"><div className="av" style={{ background: 'linear-gradient(135deg,#4facfe,#00f2fe)' }}>KT</div></div>
-                        <div style={{ flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>Reprise : <span style={{ color: 'var(--text)' }}>Indéfinie</span></div>
-                    </div>
-                </div>
+function getStatusClass(status: string) {
+  if (status === 'ACTIVE') {
+    return 'b-green';
+  }
 
-                {/* Card 5 */}
-                <div className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')} onMouseLeave={e => (e.currentTarget.style.transform = '')}>
-                    <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                            <div style={{ width: '38px', height: '38px', background: 'rgba(61,138,255,0.08)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📊</div>
-                            <div><div style={{ fontSize: '14px', fontWeight: 600 }}>Dashboard Analytics</div><div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Groupe Atlas</div></div>
-                            <span className="badge b-blue" style={{ marginLeft: 'auto' }}>Livré ✓</span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: '12px' }}>Tableau de bord BI temps réel, visualisations D3.js, exports PDF/Excel.</div>
-                        <div className="pbar-wrap"><div className="pbar" style={{ height: '7px' }}><div className="pfill" style={{ width: '100%', background: 'var(--accent2)' }}></div></div><span className="ppct" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent2)' }}>100%</span></div>
-                    </div>
-                    <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="team-stack"><div className="av" style={{ background: 'linear-gradient(135deg,#43e97b,#38f9d7)' }}>SA</div><div className="av" style={{ background: 'linear-gradient(135deg,#fa709a,#fee140)' }}>MR</div></div>
-                        <div style={{ flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>Livré le <span style={{ color: 'var(--accent)' }}>1 Mar 2025</span></div>
-                    </div>
-                </div>
+  if (status === 'COMPLETED') {
+    return 'b-blue';
+  }
 
-                {/* New project card */}
-                <div className="card" style={{ cursor: 'pointer', transition: 'all 0.2s', borderStyle: 'dashed' }} onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')} onMouseLeave={e => (e.currentTarget.style.transform = '')}>
-                    <div className="empty-state" style={{ padding: '50px 20px' }}>
-                        <div className="empty-ico">＋</div>
-                        <p style={{ color: 'var(--accent)' }}>Créer un nouveau projet</p>
-                        <p style={{ fontSize: '12px', marginTop: '5px' }}>Client, budget, équipe, dates</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+  if (status === 'ON_HOLD') {
+    return 'b-yellow';
+  }
+
+  return 'b-gray';
+}
+
+export default function Projets({ token, role }: ProjetsProps) {
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProjects() {
+      setLoading(true);
+      setError('');
+
+      try {
+        const response = await getProjects(token, undefined, selectedStatus);
+
+        if (isMounted) {
+          setProjects(response.content);
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load projects.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadProjects();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedStatus, token]);
+
+  if (role === 'employee') {
+    return <div className="card"><div className="card-body">Projects are limited to admin and manager roles.</div></div>;
+  }
+
+  const handleCreateProject = async (project: ProjectData) => {
+    const description = [project.description, project.client ? `Client: ${project.client}` : '']
+      .filter(Boolean)
+      .join('\n\n');
+
+    const createdProject = await createProject(token, {
+      name: project.name,
+      description,
+      status:
+        project.status === 'active'
+          ? 'ACTIVE'
+          : project.status === 'planning'
+            ? 'PLANNING'
+            : project.status === 'paused'
+              ? 'ON_HOLD'
+              : project.status === 'done'
+                ? 'COMPLETED'
+                : 'CANCELLED',
+      startDate: project.startDate || null,
+      endDate: project.endDate || null,
+      budget: project.budget ? Number(project.budget) : null,
+      progressPercentage: 0,
+    });
+
+    setProjects((current) => [createdProject, ...current]);
+  };
+
+  const handleUpdateProject = async (projectData: ProjectData) => {
+    if (!editingProject) {
+      return;
+    }
+
+    const description = [projectData.description, projectData.client ? `Client: ${projectData.client}` : '']
+      .filter(Boolean)
+      .join('\n\n');
+
+    const updatedProject = await updateProject(token, editingProject.id, {
+      name: projectData.name,
+      description,
+      status:
+        projectData.status === 'active'
+          ? 'ACTIVE'
+          : projectData.status === 'planning'
+            ? 'PLANNING'
+            : projectData.status === 'paused'
+              ? 'ON_HOLD'
+              : projectData.status === 'done'
+                ? 'COMPLETED'
+                : 'CANCELLED',
+      startDate: projectData.startDate || null,
+      endDate: projectData.endDate || null,
+      budget: projectData.budget ? Number(projectData.budget) : null,
+      progressPercentage: editingProject.progressPercentage ?? 0,
+    });
+
+    setProjects((current) =>
+      current.map((project) => (project.id === updatedProject.id ? updatedProject : project)),
     );
+    setEditingProject(null);
+  };
+
+  const handleDeleteProject = async (projectId: number) => {
+    await deleteProject(token, projectId);
+    setProjects((current) => current.filter((project) => project.id !== projectId));
+  };
+
+  if (loading) {
+    return <div className="card"><div className="card-body">Loading projects...</div></div>;
+  }
+
+  if (error) {
+    return <div className="card"><div className="card-body">Projects error: {error}</div></div>;
+  }
+
+  return (
+    <div>
+      {showModal ? (
+        <ProjectModal onClose={() => setShowModal(false)} onSave={handleCreateProject} />
+      ) : null}
+      {editingProject ? (
+        <ProjectModal
+          mode="edit"
+          initial={{
+            name: editingProject.name,
+            description: editingProject.description,
+            client: '',
+            startDate: editingProject.startDate ?? '',
+            endDate: editingProject.endDate ?? '',
+            budget: editingProject.budget?.toString() ?? '',
+            status:
+              editingProject.status === 'ACTIVE'
+                ? 'active'
+                : editingProject.status === 'PLANNING'
+                  ? 'planning'
+                  : editingProject.status === 'ON_HOLD'
+                    ? 'paused'
+                    : editingProject.status === 'COMPLETED'
+                      ? 'done'
+                      : 'archived',
+            priority: 'medium',
+            team: [],
+          }}
+          onClose={() => setEditingProject(null)}
+          onSave={handleUpdateProject}
+        />
+      ) : null}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+        <div style={{ flex: 1 }}>
+          <div className="section-title" style={{ margin: 0 }}>
+            Project portfolio
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            {projects.length} projects loaded from the backend
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {filters.map((filter) => (
+            <span
+              key={filter.value}
+              className={`tag ${selectedStatus === filter.value ? 'sel' : ''}`}
+              onClick={() => setSelectedStatus(filter.value)}
+            >
+              {filter.label}
+            </span>
+          ))}
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+          New project
+        </button>
+      </div>
+
+      <div className="grid-3 mb18">
+        {projects.map((project) => (
+          <div key={project.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }}>
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    background: 'rgba(79,255,176,0.1)',
+                    borderRadius: '9px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                  }}
+                >
+                  {project.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>{project.name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Created {formatDate(project.createdAt)}
+                  </div>
+                </div>
+                <span className={`badge ${getStatusClass(project.status)}`}>{project.status}</span>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: '12px' }}>
+                {project.description || 'No description provided for this project yet.'}
+              </div>
+              <div className="pbar-wrap">
+                <div className="pbar" style={{ height: '7px' }}>
+                  <div className="pfill" style={{ width: `${project.progressPercentage ?? 0}%` }}></div>
+                </div>
+                <span className="ppct" style={{ fontSize: '13px', fontWeight: 600 }}>
+                  {project.progressPercentage ?? 0}%
+                </span>
+              </div>
+            </div>
+            <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>
+                Due: <span style={{ color: 'var(--text)' }}>{formatDate(project.endDate)}</span>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                Tasks: <span style={{ color: 'var(--accent2)' }}>{project.taskCount}</span>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                Members: <span style={{ color: 'var(--accent4)' }}>{project.memberCount}</span>
+              </div>
+            </div>
+            <div style={{ padding: '0 18px 16px', display: 'flex', gap: '8px' }}>
+              <button className="action-btn" onClick={() => setEditingProject(project)}>
+                Edit
+              </button>
+              <button
+                className="action-btn action-btn-danger"
+                onClick={() => void handleDeleteProject(project.id)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

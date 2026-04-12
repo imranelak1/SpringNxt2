@@ -110,6 +110,8 @@ export async function login(email: string, password: string): Promise<AuthSessio
     email: response.email,
     role: mapRole(response.role),
     backendRole: response.role,
+    firstName: response.firstName ?? '',
+    lastName: response.lastName ?? '',
   };
 }
 

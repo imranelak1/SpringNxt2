@@ -97,7 +97,7 @@ export default function Home() {
     budgets: <Budgets />,
     performance: <Performance />,
     notifications: <Notifications />,
-    parametres: <Parametres />,
+    parametres: <Parametres email={session.email} role={session.role} firstName={session.firstName ?? ''} lastName={session.lastName ?? ''} />,
     utilisateurs: <Utilisateurs token={session.token} />,
     'import-pdf': <PdfImport token={session.token} />,
     gantt: <GanttView token={session.token} role={session.role} />,
@@ -108,8 +108,11 @@ export default function Home() {
       <Sidebar
         activeView={activeView}
         onNavigate={setActiveView}
+        onLogout={handleLogout}
         role={session.role}
         email={session.email}
+        firstName={session.firstName ?? ''}
+        lastName={session.lastName ?? ''}
       />
       <main className="main">
         <Topbar

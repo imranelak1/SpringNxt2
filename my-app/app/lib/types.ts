@@ -20,12 +20,16 @@ export interface AuthSession {
   email: string;
   role: AppRole;
   backendRole: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface AuthResponse {
   token: string;
   email: string;
   role: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface DashboardProjectSummary {

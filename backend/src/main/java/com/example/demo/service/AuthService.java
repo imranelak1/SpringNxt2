@@ -44,24 +44,12 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.EMPLOYEE)
                 .provider(AuthProvider.LOCAL)
-                .enabled(false)
+                .enabled(true)
                 .build();
 
         userRepository.save(user);
 
-        // Generate verification token
-        String token = UUID.randomUUID().toString();
-        VerificationToken verificationToken = VerificationToken.builder()
-                .token(token)
-                .user(user)
-                .expiryDate(LocalDateTime.now().plusHours(24))
-                .build();
-        verificationTokenRepository.save(verificationToken);
-
-        // Send verification email
-        emailService.sendVerificationEmail(user.getEmail(), token);
-
-        return "Registration successful. Please check your email to verify your account.";
+        return "Registration successful. You can now log in.";
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -88,6 +76,8 @@ public class AuthService {
                 .token(token)
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
                 .build();
     }
 

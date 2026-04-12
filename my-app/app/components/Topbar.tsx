@@ -1,5 +1,6 @@
 'use client';
 
+import { Bell, Search, Sun, Moon, Plus, LogOut } from 'lucide-react';
 import type { View } from '../lib/types';
 
 const titles: Record<View, string> = {
@@ -48,23 +49,24 @@ export default function Topbar({ activeView, onNavigate, onLogout, theme, onTogg
       >
         {today}
       </span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div className="search-box">
-          <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>&#8981;</span>
+          <Search size={13} color="var(--text-muted)" strokeWidth={2} />
           <input type="text" placeholder="Rechercher..." />
         </div>
-        <div className="icon-btn notif-rel" onClick={() => onNavigate('notifications')}>
-          &#128276;
+        <div className="icon-btn notif-rel" onClick={() => onNavigate('notifications')} title="Notifications">
+          <Bell size={15} strokeWidth={1.8} />
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={onToggleTheme}>
-          {theme === 'dark' ? 'Light' : 'Dark'}
-        </button>
+        <div className="icon-btn" onClick={onToggleTheme} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
+          {theme === 'dark' ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
+        </div>
         <button className="btn btn-primary btn-sm" onClick={() => onNavigate('projets')}>
-          + Nouveau
+          <Plus size={13} strokeWidth={2.5} />
+          Nouveau
         </button>
-        <button className="btn btn-ghost btn-sm" onClick={onLogout}>
-          Deconnexion
-        </button>
+        <div className="icon-btn" onClick={onLogout} title="Deconnexion">
+          <LogOut size={15} strokeWidth={1.8} />
+        </div>
       </div>
     </div>
   );

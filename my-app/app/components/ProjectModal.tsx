@@ -1,6 +1,8 @@
 'use client';
 
+import { X } from 'lucide-react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ProjectModalProps {
   onClose: () => void;
@@ -85,13 +87,15 @@ export default function ProjectModal({
             ? 'var(--accent3)'
             : '#ff3333';
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div className="modal-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal modal-lg">
         <div className="modal-header">
           <div className="modal-title">{mode === 'create' ? 'New Project' : 'Edit Project'}</div>
           <div className="modal-close" onClick={onClose}>
-            x
+            <X size={14} strokeWidth={2.5} />
           </div>
         </div>
         <div className="modal-body">
@@ -126,7 +130,7 @@ export default function ProjectModal({
           </div>
           <div className="form-row" style={{ marginBottom: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Start date</label>
+              <label className="form-label">Start date *</label>
               <input
                 className="form-input"
                 type="date"
@@ -135,7 +139,7 @@ export default function ProjectModal({
               />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">End date</label>
+              <label className="form-label">End date *</label>
               <input
                 className="form-input"
                 type="date"
@@ -223,10 +227,11 @@ export default function ProjectModal({
             Cancel
           </button>
           <button className="btn btn-primary" onClick={() => void handleSave()} disabled={loading}>
-            {loading ? 'Saving...' : mode === 'create' ? 'Create Project' : 'Save'}
+            {loading ? 'Saving...' : mode === 'create' ? 'Create Project' : 'Save Project'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

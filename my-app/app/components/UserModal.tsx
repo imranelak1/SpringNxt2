@@ -1,6 +1,8 @@
 'use client';
 
+import { X } from 'lucide-react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface UserModalProps {
   onClose: () => void;
@@ -38,13 +40,15 @@ export default function UserModal({ onClose, onSave, mode = 'create', initial }:
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div className="modal-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
           <div className="modal-title">{mode === 'create' ? 'Invite User' : 'Edit User'}</div>
           <div className="modal-close" onClick={onClose}>
-            x
+            <X size={14} strokeWidth={2.5} />
           </div>
         </div>
         <div className="modal-body">
@@ -109,10 +113,11 @@ export default function UserModal({ onClose, onSave, mode = 'create', initial }:
             Cancel
           </button>
           <button className="btn btn-primary" onClick={() => void handleSave()} disabled={loading}>
-            {loading ? 'Saving...' : mode === 'create' ? 'Create User' : 'Save'}
+            {loading ? 'Saving...' : mode === 'create' ? 'Create User' : 'Save User'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import UserModal, { type UserFormData } from '../UserModal';
 import { createUser, deleteUser, getUsers, updateUser } from '../../lib/api';
+import { SkeletonTable } from '../Skeleton';
 import type { UserSummary } from '../../lib/types';
 
 interface UtilisateursProps {
@@ -136,11 +137,15 @@ export default function Utilisateurs({ token }: UtilisateursProps) {
   };
 
   if (loading) {
-    return <div className="card"><div className="card-body">Loading users...</div></div>;
+    return <SkeletonTable rows={5} cols={5} />;
   }
 
   if (error) {
-    return <div className="card"><div className="card-body">Users error: {error}</div></div>;
+    return (
+      <div className="card">
+        <div className="card-body" style={{ color: 'var(--accent3)' }}>{error}</div>
+      </div>
+    );
   }
 
   return (

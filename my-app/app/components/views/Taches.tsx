@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import TaskDetailPanel from '../TaskDetailPanel';
 import TaskModal, { type TaskData } from '../TaskModal';
 import { createTask, deleteTask, getTasks, getUsers, getProjects, updateTask } from '../../lib/api';
+import { SkeletonTable } from '../Skeleton';
 import type { AppRole, Task, UserSummary, Project } from '../../lib/types';
 
 interface TachesProps {
@@ -264,11 +265,15 @@ export default function Taches({ token, role }: TachesProps) {
   };
 
   if (loading) {
-    return <div className="card"><div className="card-body">Loading tasks...</div></div>;
+    return <SkeletonTable rows={6} cols={5} />;
   }
 
   if (error) {
-    return <div className="card"><div className="card-body">Tasks error: {error}</div></div>;
+    return (
+      <div className="card">
+        <div className="card-body" style={{ color: 'var(--accent3)' }}>{error}</div>
+      </div>
+    );
   }
 
   return (

@@ -169,7 +169,7 @@ export default function Calendrier({ token, role }: CalendrierProps) {
 
   const allEvents = useMemo<CalendarTimelineEvent[]>(() => {
     const taskEvents = tasks
-      .map((task) => {
+      .map((task): CalendarTimelineEvent | null => {
         const dueDate = parseDate(task.dueDate);
         if (!dueDate) {
           return null;
@@ -181,7 +181,7 @@ export default function Calendrier({ token, role }: CalendrierProps) {
           date: dueDate,
           cls: getTaskEventClass(task),
           source: 'task',
-        } satisfies CalendarTimelineEvent;
+        };
       })
       .filter((event): event is CalendarTimelineEvent => event !== null);
 
@@ -215,7 +215,7 @@ export default function Calendrier({ token, role }: CalendrierProps) {
     });
 
     const manualEvents = customEvents
-      .map((event) => {
+      .map((event): CalendarTimelineEvent | null => {
         const eventDate = parseDate(event.eventDate);
         if (!eventDate) {
           return null;
@@ -228,11 +228,13 @@ export default function Calendrier({ token, role }: CalendrierProps) {
           date: eventDate,
           cls: getCustomEventClass(event.type),
           source: 'custom',
-        } satisfies CalendarTimelineEvent;
+        };
       })
       .filter((event): event is CalendarTimelineEvent => event !== null);
 
-    return [...taskEvents, ...projectEvents, ...manualEvents].sort((a, b) => a.date.getTime() - b.date.getTime());
+    return [...taskEvents, ...projectEvents, ...manualEvents].sort(
+      (a, b) => a.date.getTime() - b.date.getTime(),
+    );
   }, [customEvents, projects, tasks]);
 
   const monthModel = useMemo(() => {
@@ -463,11 +465,11 @@ export default function Calendrier({ token, role }: CalendrierProps) {
           <div className="modal">
             <div className="modal-header">
               <div className="modal-title">{editingEventId !== null ? 'Edit Calendar Event' : 'Create Calendar Event'}</div>
-              <div className="modal-close" onClick={() => resetModalState()}>x</div>
+              <div className="modal-close" onClick={() => resetModalState()}>X</div>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">Title</label>
+                <label className="form-label">Title *</label>
                 <input
                   className="form-input"
                   value={newEvent.title}
@@ -477,7 +479,7 @@ export default function Calendrier({ token, role }: CalendrierProps) {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Date</label>
+                  <label className="form-label">Date *</label>
                   <input
                     type="date"
                     className="form-input"
@@ -515,7 +517,7 @@ export default function Calendrier({ token, role }: CalendrierProps) {
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => resetModalState()}>Cancel</button>
               <button className="btn btn-primary" onClick={() => void handleSaveEvent()} disabled={creatingEvent}>
-                {creatingEvent ? (editingEventId !== null ? 'Saving...' : 'Creating...') : (editingEventId !== null ? 'Save changes' : 'Create event')}
+                {creatingEvent ? (editingEventId !== null ? 'Saving...' : 'Creating...') : (editingEventId !== null ? 'Save Changes' : 'Create Event')}
               </button>
             </div>
           </div>
@@ -615,15 +617,15 @@ export default function Calendrier({ token, role }: CalendrierProps) {
                   <div className="tl-sub">{getSourceLabel(event.source)}</div>
                 </div>
                 {canManageEvents && event.source === 'custom' && event.customEventId ? (
-                  <button className="action-btn" onClick={() => openEditModal(event.customEventId)}>
+                  <button className="action-btn" onClick={() => openEditModal(event.customEventId!)}>
                     Edit
                   </button>
                 ) : null}
                 {canManageEvents && event.source === 'custom' && event.customEventId ? (
                   <button
                     className="action-btn action-btn-danger"
-                    onClick={() => void handleDeleteEvent(event.customEventId)}
-                    disabled={deletingEventId === event.customEventId}
+                    onClick={() => void handleDeleteEvent(event.customEventId!)}
+                    disabled={deletingEventId === event.customEventId!}
                   >
                     {deletingEventId === event.customEventId ? 'Deleting...' : 'Delete'}
                   </button>
@@ -660,8 +662,8 @@ export default function Calendrier({ token, role }: CalendrierProps) {
                   {canManageEvents && event.source === 'custom' && event.customEventId ? (
                     <button
                       className="action-btn"
-                      onClick={() => openEditModal(event.customEventId)}
-                      disabled={deletingEventId === event.customEventId}
+                      onClick={() => openEditModal(event.customEventId!)}
+                      disabled={deletingEventId === event.customEventId!}
                     >
                       Edit
                     </button>
@@ -669,8 +671,8 @@ export default function Calendrier({ token, role }: CalendrierProps) {
                   {canManageEvents && event.source === 'custom' && event.customEventId ? (
                     <button
                       className="action-btn action-btn-danger"
-                      onClick={() => void handleDeleteEvent(event.customEventId)}
-                      disabled={deletingEventId === event.customEventId}
+                      onClick={() => void handleDeleteEvent(event.customEventId!)}
+                      disabled={deletingEventId === event.customEventId!}
                     >
                       {deletingEventId === event.customEventId ? 'Deleting...' : 'Delete'}
                     </button>

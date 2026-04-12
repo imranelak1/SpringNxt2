@@ -1,6 +1,8 @@
 'use client';
 
+import { X } from 'lucide-react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface TaskModalProps {
   onClose: () => void;
@@ -78,13 +80,15 @@ export default function TaskModal({
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div className="modal-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal modal-lg">
         <div className="modal-header">
           <div className="modal-title">{mode === 'create' ? 'New Task' : 'Edit Task'}</div>
           <div className="modal-close" onClick={onClose}>
-            x
+            <X size={14} strokeWidth={2.5} />
           </div>
         </div>
         <div className="modal-body">
@@ -108,7 +112,7 @@ export default function TaskModal({
           </div>
           <div className="form-row" style={{ marginBottom: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Project</label>
+              <label className="form-label">Project *</label>
               <select className="form-select" value={form.project} onChange={(event) => set('project', event.target.value)}>
                 <option value="">Choose a project</option>
                 {projects.map((project) => (
@@ -128,7 +132,7 @@ export default function TaskModal({
           </div>
           <div className="form-row-3" style={{ marginBottom: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Due date</label>
+              <label className="form-label">Due date *</label>
               <input
                 className="form-input"
                 type="date"
@@ -220,10 +224,11 @@ export default function TaskModal({
             Cancel
           </button>
           <button className="btn btn-primary" onClick={() => void handleSave()} disabled={loading}>
-            {loading ? 'Saving...' : mode === 'create' ? 'Create Task' : 'Save'}
+            {loading ? 'Saving...' : mode === 'create' ? 'Create Task' : 'Save Task'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

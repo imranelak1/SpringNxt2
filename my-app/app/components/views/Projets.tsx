@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import ProjectModal, { type ProjectData } from '../ProjectModal';
 import { createProject, deleteProject, getProjects, updateProject } from '../../lib/api';
+import { SkeletonTable } from '../Skeleton';
 import type { AppRole, Project } from '../../lib/types';
 
 interface ProjetsProps {
@@ -152,11 +153,15 @@ export default function Projets({ token, role }: ProjetsProps) {
   };
 
   if (loading) {
-    return <div className="card"><div className="card-body">Loading projects...</div></div>;
+    return <SkeletonTable rows={6} cols={5} />;
   }
 
   if (error) {
-    return <div className="card"><div className="card-body">Projects error: {error}</div></div>;
+    return (
+      <div className="card">
+        <div className="card-body" style={{ color: 'var(--accent3)' }}>{error}</div>
+      </div>
+    );
   }
 
   return (

@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface TaskDetailPanelProps {
     task: {
@@ -53,7 +54,9 @@ export default function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps)
         'Haute': 'pri-high', 'Critique': 'pri-critical', 'Moyenne': 'pri-medium', 'Faible': 'pri-low'
     }[task.priority] || 'pri-medium';
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
         <>
             <div className="task-panel-overlay" onClick={onClose} />
             <div className="task-panel">
@@ -153,6 +156,7 @@ export default function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps)
                     </div>
                 </div>
             </div>
-        </>
+        </>,
+        document.body,
     );
 }

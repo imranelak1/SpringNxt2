@@ -1,6 +1,8 @@
 'use client';
 
+import { X } from 'lucide-react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface ProjectMemberFormData {
   projectId: string;
@@ -52,7 +54,9 @@ export default function ProjectMemberModal({
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div className="modal-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
@@ -60,12 +64,12 @@ export default function ProjectMemberModal({
             {mode === 'create' ? 'Assign Project Member' : 'Edit Assignment'}
           </div>
           <div className="modal-close" onClick={onClose}>
-            x
+            <X size={14} strokeWidth={2.5} />
           </div>
         </div>
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">Project</label>
+            <label className="form-label">Project *</label>
             <select className="form-select" value={form.projectId} onChange={(event) => set('projectId', event.target.value)}>
               <option value="">Choose project</option>
               {projects.map((project) => (
@@ -76,7 +80,7 @@ export default function ProjectMemberModal({
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label">User</label>
+            <label className="form-label">User *</label>
             <select className="form-select" value={form.userId} onChange={(event) => set('userId', event.target.value)}>
               <option value="">Choose user</option>
               {users.map((user) => (
@@ -128,10 +132,11 @@ export default function ProjectMemberModal({
             Cancel
           </button>
           <button className="btn btn-primary" onClick={() => void handleSave()} disabled={loading}>
-            {loading ? 'Saving...' : mode === 'create' ? 'Assign Member' : 'Save'}
+            {loading ? 'Saving...' : mode === 'create' ? 'Assign Member' : 'Save Assignment'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

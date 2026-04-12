@@ -1,59 +1,72 @@
 'use client';
 
+import {
+  LayoutDashboard,
+  FolderKanban,
+  ListChecks,
+  GanttChart,
+  Calendar,
+  Users,
+  Wallet,
+  TrendingUp,
+  Sparkles,
+  FileUp,
+  ShieldCheck,
+  Bell,
+  Settings,
+  LogOut,
+} from 'lucide-react';
 import type { AppRole, View } from '../lib/types';
 
 interface SidebarProps {
   activeView: View;
   onNavigate: (view: View) => void;
+  onLogout: () => void;
   role: AppRole;
   email: string;
+  firstName: string;
+  lastName: string;
 }
 
 const navSections = [
   {
     label: 'General',
     items: [
-      { view: 'dashboard' as View, icon: '\u229E', label: 'Tableau de bord' },
-      { view: 'projets' as View, icon: '\u{1F4C1}', label: 'Projets' },
-      { view: 'taches' as View, icon: '\u2713', label: 'Taches' },
-      { view: 'gantt' as View, icon: '\u{1F4CA}', label: 'Vue Gantt' },
-      { view: 'calendrier' as View, icon: '\u{1F4C5}', label: 'Calendrier' },
+      { view: 'dashboard' as View, icon: LayoutDashboard, label: 'Tableau de bord' },
+      { view: 'projets' as View, icon: FolderKanban, label: 'Projets' },
+      { view: 'taches' as View, icon: ListChecks, label: 'Taches' },
+      { view: 'gantt' as View, icon: GanttChart, label: 'Vue Gantt' },
+      { view: 'calendrier' as View, icon: Calendar, label: 'Calendrier' },
     ],
   },
   {
     label: 'Gestion',
     items: [
-      { view: 'ressources' as View, icon: '\u{1F465}', label: 'Ressources' },
-      { view: 'budgets' as View, icon: '\u{1F4B0}', label: 'Budgets' },
-      { view: 'performance' as View, icon: '\u{1F4C8}', label: 'Performance' },
+      { view: 'ressources' as View, icon: Users, label: 'Ressources' },
+      { view: 'budgets' as View, icon: Wallet, label: 'Budgets' },
+      { view: 'performance' as View, icon: TrendingUp, label: 'Performance' },
     ],
   },
   {
     label: 'Intelligence',
     items: [
-      { view: 'rapports' as View, icon: '\u2726', label: 'Rapports IA' },
-      { view: 'import-pdf' as View, icon: '\u{1F4C4}', label: 'Import PDF' },
+      { view: 'rapports' as View, icon: Sparkles, label: 'Rapports IA' },
+      { view: 'import-pdf' as View, icon: FileUp, label: 'Import PDF' },
     ],
   },
   {
     label: 'Administration',
     items: [
-      { view: 'utilisateurs' as View, icon: '\u{1F6E1}', label: 'Utilisateurs' },
-      { view: 'notifications' as View, icon: '\u{1F514}', label: 'Notifications' },
-      { view: 'parametres' as View, icon: '\u2699', label: 'Parametres' },
+      { view: 'utilisateurs' as View, icon: ShieldCheck, label: 'Utilisateurs' },
+      { view: 'notifications' as View, icon: Bell, label: 'Notifications' },
+      { view: 'parametres' as View, icon: Settings, label: 'Parametres' },
     ],
   },
 ];
 
 function getRoleLabel(role: AppRole) {
-  if (role === 'admin') {
-    return 'Administrateur';
-  }
-
-  if (role === 'pm') {
-    return 'Chef de Projet';
-  }
-
+  if (role === 'admin') return 'Administrateur';
+  if (role === 'pm') return 'Chef de Projet';
   return 'Employe';
 }
 
@@ -67,7 +80,11 @@ function getInitials(email: string) {
     .join('');
 }
 
-export default function Sidebar({ activeView, onNavigate, role, email }: SidebarProps) {
+export default function Sidebar({ activeView, onNavigate, onLogout, role, email, firstName, lastName }: SidebarProps) {
+  const displayName = firstName && lastName ? `${firstName} ${lastName}` : email;
+  const initials = firstName && lastName
+    ? `${firstName[0]}${lastName[0]}`.toUpperCase()
+    : getInitials(email);
   return (
     <aside className="sidebar">
       <div className="logo">
@@ -87,25 +104,28 @@ export default function Sidebar({ activeView, onNavigate, role, email }: Sidebar
         {navSections.map((section) => (
           <div className="nav-section" key={section.label}>
             <div className="nav-lbl">{section.label}</div>
-            {section.items.map((item) => (
-              <div
-                key={item.view}
-                className={`nav-item ${activeView === item.view ? 'active' : ''}`}
-                onClick={() => onNavigate(item.view)}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                {item.label}
-              </div>
-            ))}
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.view}
+                  className={`nav-item ${activeView === item.view ? 'active' : ''}`}
+                  onClick={() => onNavigate(item.view)}
+                >
+                  <Icon size={15} strokeWidth={1.8} className="nav-icon-svg" />
+                  {item.label}
+                </div>
+              );
+            })}
           </div>
         ))}
       </nav>
       <div className="sidebar-footer">
         <div className="av" style={{ background: 'linear-gradient(135deg,#667eea,#764ba2)' }}>
-          {getInitials(email)}
+          {initials}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="user-name">{email}</div>
+          <div className="user-name">{displayName}</div>
           <div
             style={{
               fontSize: '10px',
@@ -130,6 +150,33 @@ export default function Sidebar({ activeView, onNavigate, role, email }: Sidebar
             {getRoleLabel(role)}
           </div>
         </div>
+        <button
+          onClick={onLogout}
+          title="Se déconnecter"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--text-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px',
+            borderRadius: '7px',
+            flexShrink: 0,
+            transition: 'color 0.15s, background 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent3)';
+            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,107,107,0.08)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+            (e.currentTarget as HTMLButtonElement).style.background = 'none';
+          }}
+        >
+          <LogOut size={15} strokeWidth={1.8} />
+        </button>
       </div>
     </aside>
   );

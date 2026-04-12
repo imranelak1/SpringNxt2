@@ -47,7 +47,7 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-family: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -184,6 +184,15 @@ body::before {
   font-size: 14px;
 }
 
+.nav-icon-svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.nav-item.active .nav-icon-svg {
+  opacity: 1;
+}
+
 .nbadge {
   margin-left: auto;
   font-size: 10px;
@@ -238,8 +247,12 @@ body::before {
 }
 
 .user-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
 }
 
 .user-role {
@@ -392,13 +405,50 @@ body::before {
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(6px);
   }
 
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* === SKELETON LOADER === */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface2) 25%,
+    var(--surface3) 50%,
+    var(--surface2) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.mb8 { margin-bottom: 8px; }
+
+/* === MODAL ANIMATIONS === */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* CARDS */
@@ -1442,12 +1492,13 @@ body::before {
 
 .login-card {
   width: 420px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #161a22;
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 20px;
   padding: 40px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
 .login-card::before {
@@ -1485,77 +1536,95 @@ body::before {
 }
 
 .form-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-dim);
-  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 7px;
   display: block;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
 }
 
-.form-input {
+.form-input,
+.form-select,
+.form-textarea {
   width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 9px;
-  padding: 11px 14px;
+  padding: 10px 14px;
   color: var(--text);
   font-family: var(--font-dm-sans, 'DM Sans'), sans-serif;
-  font-size: 13px;
+  font-size: 13.5px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
-.form-input:focus {
+.form-input:hover,
+.form-select:hover,
+.form-textarea:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
   border-color: var(--accent);
+  background: rgba(79, 255, 176, 0.04);
+  box-shadow: 0 0 0 3px rgba(79, 255, 176, 0.10);
 }
 
-.form-input::placeholder {
+.form-input::placeholder,
+.form-textarea::placeholder {
   color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .form-select {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 11px 14px;
-  color: var(--text);
-  font-family: var(--font-dm-sans, 'DM Sans'), sans-serif;
-  font-size: 13px;
-  outline: none;
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
-}
-
-.form-select:focus {
-  border-color: var(--accent);
+  background-size: 10px;
 }
 
 .form-select option {
-  background: var(--surface2);
+  background: #1e2330;
+  color: var(--text);
 }
 
 .form-textarea {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 11px 14px;
-  color: var(--text);
-  font-family: var(--font-dm-sans, 'DM Sans'), sans-serif;
-  font-size: 13px;
-  outline: none;
   resize: vertical;
-  min-height: 80px;
+  min-height: 84px;
+  line-height: 1.6;
 }
 
-.form-textarea:focus {
-  border-color: var(--accent);
+[data-theme='light'] .form-input,
+[data-theme='light'] .form-select,
+[data-theme='light'] .form-textarea {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(14, 22, 38, 0.18);
+}
+
+[data-theme='light'] .form-input:hover,
+[data-theme='light'] .form-select:hover,
+[data-theme='light'] .form-textarea:hover {
+  border-color: rgba(14, 22, 38, 0.30);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='light'] .form-input:focus,
+[data-theme='light'] .form-select:focus,
+[data-theme='light'] .form-textarea:focus {
+  border-color: var(--accent2);
+  background: rgba(61, 138, 255, 0.04);
+  box-shadow: 0 0 0 3px rgba(61, 138, 255, 0.10);
+}
+
+[data-theme='light'] .form-select option {
+  background: #ffffff;
 }
 
 .btn-full {
@@ -1607,34 +1676,27 @@ body::before {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.15s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  overflow-y: auto;
+  overflow-x: hidden;
+  animation: overlayIn 0.18s ease;
 }
 
 .modal {
-  background: var(--surface);
-  border: 1px solid var(--border2);
+  background: #161a22;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
   width: 560px;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: slideUp 0.2s ease;
-  position: relative;
+  max-width: calc(100% - 32px);
+  margin: 5vh auto 8vh;
+  animation: modalIn 0.22s cubic-bezier(0.34, 1.26, 0.64, 1);
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .modal-lg {
@@ -1645,28 +1707,12 @@ body::before {
   width: 900px;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .modal-header {
-  padding: 22px 24px 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   align-items: center;
   gap: 12px;
-  position: sticky;
-  top: 0;
-  background: var(--surface);
-  z-index: 1;
 }
 
 .modal-title {
@@ -1685,15 +1731,16 @@ body::before {
   justify-content: center;
   cursor: pointer;
   color: var(--text-muted);
-  font-size: 18px;
   background: var(--surface2);
   border: 1px solid var(--border);
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 
 .modal-close:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border2);
 }
 
 .modal-body {
@@ -1702,13 +1749,10 @@ body::before {
 
 .modal-footer {
   padding: 16px 24px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  position: sticky;
-  bottom: 0;
-  background: var(--surface);
 }
 
 .form-row {
@@ -2048,6 +2092,8 @@ body::before {
 .task-panel-body {
   padding: 20px;
   flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .task-panel-section {

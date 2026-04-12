@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getDashboard } from '../../lib/api';
+import { SkeletonStatCards, SkeletonTable, SkeletonCard } from '../Skeleton';
 import type { AppRole, DashboardResponse, View } from '../../lib/types';
 
 interface DashboardProps {
@@ -91,11 +92,28 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
   }, [token]);
 
   if (loading) {
-    return <div className="card"><div className="card-body">Loading dashboard...</div></div>;
+    return (
+      <div>
+        <SkeletonStatCards />
+        <div className="grid-lr">
+          <SkeletonTable rows={4} cols={5} />
+          <div className="col-stack">
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={3} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="card"><div className="card-body">Dashboard error: {error}</div></div>;
+    return (
+      <div className="card">
+        <div className="card-body" style={{ color: 'var(--accent3)' }}>
+          {error}
+        </div>
+      </div>
+    );
   }
 
   if (!data) {

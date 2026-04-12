@@ -31,6 +31,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Transactional
     public TaskResponse createTask(TaskRequest request) {
@@ -52,7 +53,18 @@ public class TaskService {
                 .assignee(assignee)
                 .build();
 
-        return mapToResponse(taskRepository.save(task));
+        TaskResponse response = mapToResponse(taskRepository.save(task));
+
+        if (assignee != null) {
+            emailService.sendTaskAssignedEmail(
+                    assignee.getEmail(),
+                    assignee.getFirstName(),
+                    task.getTitle(),
+                    project.getName(),
+                    request.getDueDate() != null ? request.getDueDate().toString() : null);
+        }
+
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -127,21 +139,51 @@ public class TaskService {
         validateDates(request);
 
         Task task = findTask(id);
+        User oldAssignee = task.getAssignee();
+        TaskStatus oldStatus = task.getStatus();
+
         Project project = findProject(request.getProjectId());
-        User assignee = findAssignee(request.getAssigneeId());
+        User newAssignee = findAssignee(request.getAssigneeId());
+        TaskStatus newStatus = request.getStatus() != null ? request.getStatus() : task.getStatus();
 
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
-        task.setStatus(request.getStatus() != null ? request.getStatus() : task.getStatus());
+        task.setStatus(newStatus);
         task.setPriority(request.getPriority() != null ? request.getPriority() : task.getPriority());
         task.setStartDate(request.getStartDate());
         task.setDueDate(request.getDueDate());
         task.setEstimatedHours(request.getEstimatedHours());
         task.setActualHours(request.getActualHours());
         task.setProject(project);
-        task.setAssignee(assignee);
+        task.setAssignee(newAssignee);
 
-        return mapToResponse(taskRepository.save(task));
+        TaskResponse response = mapToResponse(taskRepository.save(task));
+
+        // Notify new assignee if assignee changed
+        boolean assigneeChanged = newAssignee != null
+                && (oldAssignee == null || !oldAssignee.getId().equals(newAssignee.getId()));
+        if (assigneeChanged) {
+            emailService.sendTaskAssignedEmail(
+                    newAssignee.getEmail(),
+                    newAssignee.getFirstName(),
+                    task.getTitle(),
+                    project.getName(),
+                    request.getDueDate() != null ? request.getDueDate().toString() : null);
+        }
+
+        // Notify assignee if status changed
+        boolean statusChanged = newAssignee != null && oldStatus != newStatus;
+        if (statusChanged && !assigneeChanged) {
+            emailService.sendTaskStatusChangedEmail(
+                    newAssignee.getEmail(),
+                    newAssignee.getFirstName(),
+                    task.getTitle(),
+                    project.getName(),
+                    oldStatus.name(),
+                    newStatus.name());
+        }
+
+        return response;
     }
 
     @Transactional

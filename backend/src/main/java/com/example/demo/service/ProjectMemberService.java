@@ -22,6 +22,7 @@ public class ProjectMemberService {
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Transactional
     public ProjectMemberResponse addMember(ProjectMemberRequest request) {
@@ -40,7 +41,15 @@ public class ProjectMemberService {
                 .allocationPercentage(request.getAllocationPercentage())
                 .build();
 
-        return mapToResponse(projectMemberRepository.save(member));
+        ProjectMemberResponse response = mapToResponse(projectMemberRepository.save(member));
+
+        emailService.sendProjectMemberAddedEmail(
+                user.getEmail(),
+                user.getFirstName(),
+                project.getName(),
+                request.getRole() != null ? request.getRole().name() : "CONTRIBUTOR");
+
+        return response;
     }
 
     @Transactional(readOnly = true)

@@ -6,6 +6,7 @@ import com.example.demo.dto.PagedResponse;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Project;
 import com.example.demo.model.ProjectStatus;
+import com.example.demo.repository.ProjectMemberRepository;
 import com.example.demo.repository.ProjectRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,8 @@ import java.util.List;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
+    private final EmailService emailService;
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest request) {
@@ -96,16 +99,33 @@ public class ProjectService {
         validateDates(request);
 
         Project project = findProject(id);
+        ProjectStatus oldStatus = project.getStatus();
+        ProjectStatus newStatus = request.getStatus() != null ? request.getStatus() : project.getStatus();
+
         project.setName(request.getName());
         project.setDescription(request.getDescription());
-        project.setStatus(request.getStatus() != null ? request.getStatus() : project.getStatus());
+        project.setStatus(newStatus);
         project.setStartDate(request.getStartDate());
         project.setEndDate(request.getEndDate());
         project.setBudget(request.getBudget());
         project.setProgressPercentage(
                 request.getProgressPercentage() != null ? request.getProgressPercentage() : project.getProgressPercentage());
 
-        return mapToResponse(projectRepository.save(project));
+        ProjectResponse response = mapToResponse(projectRepository.save(project));
+
+        if (oldStatus != newStatus) {
+            List<String> memberEmails = projectMemberRepository.findByProjectId(id)
+                    .stream()
+                    .map(pm -> pm.getUser().getEmail())
+                    .toList();
+            emailService.sendProjectStatusChangedEmail(
+                    project.getName(),
+                    oldStatus.name(),
+                    newStatus.name(),
+                    memberEmails);
+        }
+
+        return response;
     }
 
     @Transactional

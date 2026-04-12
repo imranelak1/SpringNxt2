@@ -1,16 +1,3 @@
-INSERT INTO users (email, first_name, last_name, password, provider, role, enabled, created_at)
-VALUES
-('admin@springnxt.local', 'Admin', 'Nexus', 'password', 'LOCAL', 'ADMIN', TRUE, NOW()),
-('manager@springnxt.local', 'Project', 'Manager', 'password', 'LOCAL', 'MANAGER', TRUE, NOW()),
-('employee1@springnxt.local', 'Team', 'Member', 'password', 'LOCAL', 'EMPLOYEE', TRUE, NOW())
-ON DUPLICATE KEY UPDATE
-  first_name = VALUES(first_name),
-  last_name = VALUES(last_name),
-  password = VALUES(password),
-  provider = VALUES(provider),
-  role = VALUES(role),
-  enabled = VALUES(enabled);
-
 INSERT INTO calendar_events (title, description, event_date, type, created_by_user_id, created_at)
 SELECT
   'Kickoff produit',

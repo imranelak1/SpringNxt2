@@ -5,3 +5,13 @@ backend/data/*.mv.db
 backend/data/*.trace.db
 backend/backend-dev.*
 my-app/frontend-dev.*
+
+# Local credentials - never commit
+backend/src/main/resources/application-local.properties
+
+# Build/run logs
+backend/*.txt
+
+# Generated files
+my-app/NEXUS_Dashboard.html
+my-app/nexus-screenshots/

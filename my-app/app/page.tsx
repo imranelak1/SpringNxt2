@@ -98,7 +98,7 @@ export default function Home() {
     performance: <Performance />,
     notifications: <Notifications />,
     parametres: <Parametres email={session.email} role={session.role} firstName={session.firstName ?? ''} lastName={session.lastName ?? ''} />,
-    utilisateurs: <Utilisateurs token={session.token} />,
+    utilisateurs: <Utilisateurs token={session.token} role={session.role} />,
     'import-pdf': <PdfImport token={session.token} />,
     gantt: <GanttView token={session.token} role={session.role} />,
   };
@@ -119,6 +119,7 @@ export default function Home() {
           activeView={activeView}
           onNavigate={setActiveView}
           onLogout={handleLogout}
+          role={session.role}
           theme={theme}
           onToggleTheme={handleToggleTheme}
         />

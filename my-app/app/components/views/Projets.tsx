@@ -75,12 +75,17 @@ export default function Projets({ token, role }: ProjetsProps) {
       }
     }
 
+    if (role === 'employee') {
+      setLoading(false);
+      return;
+    }
+
     void loadProjects();
 
     return () => {
       isMounted = false;
     };
-  }, [selectedStatus, token]);
+  }, [role, selectedStatus, token]);
 
   if (role === 'employee') {
     return <div className="card"><div className="card-body">Projects are limited to admin and manager roles.</div></div>;

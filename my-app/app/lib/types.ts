@@ -83,6 +83,16 @@ export interface Task {
   assigneeEmail: string | null;
 }
 
+export interface TaskComment {
+  id: number;
+  taskId: number;
+  authorId: number;
+  authorEmail: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface PagedResponse<T> {
   content: T[];
   page: number;

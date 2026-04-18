@@ -10,6 +10,7 @@ import com.example.demo.model.TaskPriority;
 import com.example.demo.model.TaskStatus;
 import com.example.demo.model.User;
 import com.example.demo.repository.ProjectRepository;
+import com.example.demo.repository.TaskCommentRepository;
 import com.example.demo.repository.TaskRepository;
 import com.example.demo.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -29,6 +30,7 @@ import java.util.List;
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final TaskCommentRepository taskCommentRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
@@ -188,6 +190,7 @@ public class TaskService {
 
     @Transactional
     public void deleteTask(Long id) {
+        taskCommentRepository.deleteByTaskId(id);
         taskRepository.delete(findTask(id));
     }
 

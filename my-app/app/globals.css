@@ -155,6 +155,36 @@ body::before {
   margin-bottom: 5px;
 }
 
+.nav-section-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.nav-chevron {
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.nav-chevron.open {
+  transform: rotate(180deg);
+}
+
+.nav-items {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.24s ease;
+}
+
+.nav-items.open {
+  max-height: 320px;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
@@ -187,6 +217,13 @@ body::before {
 .nav-icon-svg {
   flex-shrink: 0;
   opacity: 0.8;
+}
+
+.nav-icon-placeholder {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .nav-item.active .nav-icon-svg {

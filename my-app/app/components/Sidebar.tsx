@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -15,6 +16,7 @@ import {
   Bell,
   Settings,
   LogOut,
+  ChevronDown,
 } from 'lucide-react';
 import type { AppRole, View } from '../lib/types';
 
@@ -32,34 +34,34 @@ const navSections = [
   {
     label: 'General',
     items: [
-      { view: 'dashboard' as View, icon: LayoutDashboard, label: 'Tableau de bord' },
-      { view: 'projets' as View, icon: FolderKanban, label: 'Projets' },
-      { view: 'taches' as View, icon: ListChecks, label: 'Taches' },
-      { view: 'gantt' as View, icon: GanttChart, label: 'Vue Gantt' },
-      { view: 'calendrier' as View, icon: Calendar, label: 'Calendrier' },
+      { view: 'dashboard' as View, icon: LayoutDashboard, label: 'Tableau de bord', essentialIcon: true },
+      { view: 'projets' as View, icon: FolderKanban, label: 'Projets', essentialIcon: false },
+      { view: 'taches' as View, icon: ListChecks, label: 'Taches', essentialIcon: true },
+      { view: 'gantt' as View, icon: GanttChart, label: 'Vue Gantt', essentialIcon: false },
+      { view: 'calendrier' as View, icon: Calendar, label: 'Calendrier', essentialIcon: true },
     ],
   },
   {
     label: 'Gestion',
     items: [
-      { view: 'ressources' as View, icon: Users, label: 'Ressources' },
-      { view: 'budgets' as View, icon: Wallet, label: 'Budgets' },
-      { view: 'performance' as View, icon: TrendingUp, label: 'Performance' },
+      { view: 'ressources' as View, icon: Users, label: 'Ressources', essentialIcon: true },
+      { view: 'budgets' as View, icon: Wallet, label: 'Budgets', essentialIcon: false },
+      { view: 'performance' as View, icon: TrendingUp, label: 'Performance', essentialIcon: false },
     ],
   },
   {
     label: 'Intelligence',
     items: [
-      { view: 'rapports' as View, icon: Sparkles, label: 'Rapports IA' },
-      { view: 'import-pdf' as View, icon: FileUp, label: 'Import PDF' },
+      { view: 'rapports' as View, icon: Sparkles, label: 'Rapports IA', essentialIcon: false },
+      { view: 'import-pdf' as View, icon: FileUp, label: 'Import PDF', essentialIcon: false },
     ],
   },
   {
     label: 'Administration',
     items: [
-      { view: 'utilisateurs' as View, icon: ShieldCheck, label: 'Utilisateurs' },
-      { view: 'notifications' as View, icon: Bell, label: 'Notifications' },
-      { view: 'parametres' as View, icon: Settings, label: 'Parametres' },
+      { view: 'utilisateurs' as View, icon: ShieldCheck, label: 'Utilisateurs', essentialIcon: true },
+      { view: 'notifications' as View, icon: Bell, label: 'Notifications', essentialIcon: false },
+      { view: 'parametres' as View, icon: Settings, label: 'Parametres', essentialIcon: false },
     ],
   },
 ];
@@ -80,11 +82,39 @@ function getInitials(email: string) {
     .join('');
 }
 
+function canAccessView(role: AppRole, view: View) {
+  if (role === 'employee') {
+    return !['projets', 'ressources', 'utilisateurs', 'gantt'].includes(view);
+  }
+
+  return true;
+}
+
 export default function Sidebar({ activeView, onNavigate, onLogout, role, email, firstName, lastName }: SidebarProps) {
+  const visibleSections = useMemo(
+    () =>
+      navSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => canAccessView(role, item.view)),
+        }))
+        .filter((section) => section.items.length > 0),
+    [role],
+  );
+  const activeSectionLabel =
+    visibleSections.find((section) => section.items.some((item) => item.view === activeView))?.label ??
+    visibleSections[0]?.label ??
+    '';
+  const [openSection, setOpenSection] = useState(activeSectionLabel);
+  useEffect(() => {
+    setOpenSection(activeSectionLabel);
+  }, [activeSectionLabel]);
+
   const displayName = firstName && lastName ? `${firstName} ${lastName}` : email;
   const initials = firstName && lastName
     ? `${firstName[0]}${lastName[0]}`.toUpperCase()
     : getInitials(email);
+
   return (
     <aside className="sidebar">
       <div className="logo">
@@ -101,22 +131,38 @@ export default function Sidebar({ activeView, onNavigate, onLogout, role, email,
         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>&#9662;</span>
       </div>
       <nav className="nav">
-        {navSections.map((section) => (
+        {visibleSections.map((section) => (
           <div className="nav-section" key={section.label}>
-            <div className="nav-lbl">{section.label}</div>
-            {section.items.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.view}
-                  className={`nav-item ${activeView === item.view ? 'active' : ''}`}
-                  onClick={() => onNavigate(item.view)}
-                >
-                  <Icon size={15} strokeWidth={1.8} className="nav-icon-svg" />
-                  {item.label}
-                </div>
-              );
-            })}
+            <button
+              className="nav-lbl nav-section-toggle"
+              onClick={() => setOpenSection((current) => (current === section.label ? '' : section.label))}
+            >
+              <span>{section.label}</span>
+              <ChevronDown
+                size={13}
+                strokeWidth={2}
+                className={`nav-chevron ${openSection === section.label ? 'open' : ''}`}
+              />
+            </button>
+            <div className={`nav-items ${openSection === section.label ? 'open' : ''}`}>
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.view}
+                    className={`nav-item ${activeView === item.view ? 'active' : ''}`}
+                    onClick={() => onNavigate(item.view)}
+                  >
+                    {item.essentialIcon ? (
+                      <Icon size={13} strokeWidth={1.7} className="nav-icon-svg" />
+                    ) : (
+                      <span className="nav-icon-placeholder" aria-hidden="true"></span>
+                    )}
+                    {item.label}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ))}
       </nav>

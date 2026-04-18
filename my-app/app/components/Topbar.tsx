@@ -1,7 +1,7 @@
 'use client';
 
 import { Bell, Search, Sun, Moon, Plus, LogOut } from 'lucide-react';
-import type { View } from '../lib/types';
+import type { AppRole, View } from '../lib/types';
 
 const titles: Record<View, string> = {
   dashboard: 'Tableau de bord',
@@ -23,11 +23,12 @@ interface TopbarProps {
   activeView: View;
   onNavigate: (view: View) => void;
   onLogout: () => void;
+  role: AppRole;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
 }
 
-export default function Topbar({ activeView, onNavigate, onLogout, theme, onToggleTheme }: TopbarProps) {
+export default function Topbar({ activeView, onNavigate, onLogout, role, theme, onToggleTheme }: TopbarProps) {
   const today = new Intl.DateTimeFormat('fr-FR', {
     month: 'short',
     day: 'numeric',
@@ -60,7 +61,12 @@ export default function Topbar({ activeView, onNavigate, onLogout, theme, onTogg
         <div className="icon-btn" onClick={onToggleTheme} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
           {theme === 'dark' ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
         </div>
-        <button className="btn btn-primary btn-sm" onClick={() => onNavigate('projets')}>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => onNavigate(role === 'employee' ? 'taches' : 'projets')}
+          disabled={role === 'employee'}
+          title={role === 'employee' ? 'Reserved for admin/manager roles' : 'Create project'}
+        >
           <Plus size={13} strokeWidth={2.5} />
           Nouveau
         </button>

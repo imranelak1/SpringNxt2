@@ -67,6 +67,10 @@ function estimateProgress(task: Task) {
     return 100;
   }
 
+  if (task.actualHours !== null && task.estimatedHours === null) {
+    return Math.min(100, Math.max(0, Math.round(task.actualHours)));
+  }
+
   if (task.actualHours !== null && task.estimatedHours && task.estimatedHours > 0) {
     return Math.min(100, Math.round((task.actualHours / task.estimatedHours) * 100));
   }
@@ -257,6 +261,32 @@ export default function Taches({ token, role }: TachesProps) {
     setSelectedTask((current) => (current?.id === taskId ? null : current));
   };
 
+  const handleProgressSave = async (taskId: number, progress: number) => {
+    const target = tasks.find((task) => task.id === taskId);
+    if (!target) {
+      throw new Error('Task not found.');
+    }
+    if (target.projectId === null) {
+      throw new Error('Task is missing a project association.');
+    }
+
+    const updated = await updateTask(token, target.id, {
+      title: target.title,
+      description: target.description,
+      status: progress === 100 ? 'DONE' : target.status === 'DONE' ? 'IN_PROGRESS' : target.status,
+      priority: target.priority,
+      startDate: target.startDate,
+      dueDate: target.dueDate,
+      estimatedHours: target.estimatedHours,
+      actualHours: progress,
+      projectId: target.projectId,
+      assigneeId: target.assigneeId,
+    });
+
+    setTasks((current) => current.map((task) => (task.id === updated.id ? updated : task)));
+    setSelectedTask((current) => (current?.id === updated.id ? updated : current));
+  };
+
   const groupedTasks = {
     TODO: tasks.filter((task) => task.status === 'TODO'),
     IN_PROGRESS: tasks.filter((task) => task.status === 'IN_PROGRESS'),
@@ -319,6 +349,7 @@ export default function Taches({ token, role }: TachesProps) {
       {selectedTask ? (
         <TaskDetailPanel
           task={{
+            id: selectedTask.id,
             title: selectedTask.title,
             tag: selectedTask.projectName ?? 'Task',
             tagCls: 'tt-dev',
@@ -330,6 +361,8 @@ export default function Taches({ token, role }: TachesProps) {
             progress: estimateProgress(selectedTask),
             project: selectedTask.projectName ?? 'No project',
           }}
+          token={token}
+          onProgressSave={(progress) => handleProgressSave(selectedTask.id, progress)}
           onClose={() => setSelectedTask(null)}
         />
       ) : null}

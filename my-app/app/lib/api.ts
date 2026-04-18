@@ -15,6 +15,7 @@ import type {
   ProjectMember,
   Project,
   Task,
+  TaskComment,
   UserSummary,
 } from './types';
 
@@ -74,10 +75,23 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   }
 
   const rawText = await response.text();
-  const data = rawText ? (JSON.parse(rawText) as unknown) : null;
+  let data: unknown = null;
+
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText) as unknown;
+    } catch {
+      data = null;
+    }
+  }
 
   if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
+    let message =
+      response.status === 401
+        ? 'Session expired. Please log in again.'
+        : response.status === 403
+          ? 'Access denied for your current role.'
+          : `Request failed with status ${response.status}`;
 
     if (typeof data === 'object' && data !== null) {
       if ('message' in data && typeof data.message === 'string') {
@@ -261,6 +275,21 @@ export function createTask(token: string, input: CreateTaskInput) {
     {
       method: 'POST',
       body: JSON.stringify(input),
+    },
+    token,
+  );
+}
+
+export function getTaskComments(token: string, taskId: number) {
+  return request<TaskComment[]>(`/api/tasks/${taskId}/comments`, {}, token);
+}
+
+export function createTaskComment(token: string, taskId: number, text: string) {
+  return request<TaskComment>(
+    `/api/tasks/${taskId}/comments`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ text }),
     },
     token,
   );

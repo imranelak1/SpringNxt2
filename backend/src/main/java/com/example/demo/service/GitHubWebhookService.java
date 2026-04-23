@@ -48,7 +48,11 @@ public class GitHubWebhookService {
 
     public void handle(String eventType, byte[] body) {
         try {
-            JsonNode payload = objectMapper.readTree(body);
+            String raw = new String(body, StandardCharsets.UTF_8);
+            if (raw.startsWith("payload=")) {
+                raw = java.net.URLDecoder.decode(raw.substring(8), StandardCharsets.UTF_8);
+            }
+            JsonNode payload = objectMapper.readTree(raw);
             switch (eventType) {
                 case "push" -> handlePush(payload);
                 case "pull_request" -> handlePullRequest(payload);

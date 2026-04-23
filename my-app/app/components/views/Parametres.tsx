@@ -1,9 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { updateUser } from '../../lib/api';
 import type { AppRole } from '../../lib/types';
 
 interface ParametresProps {
+  userId: number;
+  token: string;
   email: string;
   role: AppRole;
   firstName: string;
@@ -48,7 +51,7 @@ const roleBadge: Record<AppRole, string> = {
   employee: 'b-blue',
 };
 
-export default function Parametres({ email, role, firstName, lastName }: ParametresProps) {
+export default function Parametres({ userId, token, email, role, firstName, lastName }: ParametresProps) {
   const displayName = firstName && lastName ? `${firstName} ${lastName}` : getDisplayName(email);
   const initials =
     firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : getInitials(email);
@@ -81,15 +84,34 @@ export default function Parametres({ email, role, firstName, lastName }: Paramet
   const [profile, setProfile] = useState<ProfileFormState>(initialProfile);
   const [savedProfile, setSavedProfile] = useState<ProfileFormState>(initialProfile);
   const [saveMessage, setSaveMessage] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const togglePref = (key: keyof typeof prefs) => setPrefs((p) => ({ ...p, [key]: !p[key] }));
   const toggleInt = (key: keyof typeof integrations) =>
     setIntegrations((i) => ({ ...i, [key]: !i[key] }));
 
-  const handleProfileSave = () => {
-    setSavedProfile(profile);
-    setIsEditingProfile(false);
-    setSaveMessage('Profil mis a jour.');
+  const handleProfileSave = async () => {
+    setSaving(true);
+    setSaveMessage('');
+    const nameParts = profile.fullName.trim().split(/\s+/);
+    const newFirstName = nameParts[0] ?? firstName;
+    const newLastName = nameParts.slice(1).join(' ') || lastName;
+    try {
+      await updateUser(token, userId, {
+        firstName: newFirstName,
+        lastName: newLastName,
+        email: profile.email,
+        password: '',
+        role: role === 'admin' ? 'ADMIN' : role === 'pm' ? 'MANAGER' : 'EMPLOYEE',
+      });
+      setSavedProfile(profile);
+      setIsEditingProfile(false);
+      setSaveMessage('Profile updated.');
+    } catch (e) {
+      setSaveMessage(e instanceof Error ? e.message : 'Unable to save profile.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleProfileCancel = () => {
@@ -287,11 +309,11 @@ export default function Parametres({ email, role, firstName, lastName }: Paramet
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleProfileSave} disabled={!isEditingProfile}>
-              Enregistrer les modifications
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => void handleProfileSave()} disabled={!isEditingProfile || saving}>
+              {saving ? 'Saving...' : 'Save changes'}
             </button>
-            <button className="btn btn-ghost" onClick={handleProfileCancel} disabled={!isEditingProfile}>
-              Annuler
+            <button className="btn btn-ghost" onClick={handleProfileCancel} disabled={!isEditingProfile || saving}>
+              Cancel
             </button>
           </div>
         </div>

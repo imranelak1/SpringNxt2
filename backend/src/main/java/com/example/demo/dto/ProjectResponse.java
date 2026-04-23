@@ -25,4 +25,5 @@ public class ProjectResponse {
     private LocalDateTime createdAt;
     private int taskCount;
     private int memberCount;
+    private String githubRepo;
 }

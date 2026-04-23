@@ -90,14 +90,14 @@ export default function Home() {
       <Dashboard onNavigate={setActiveView} token={session.token} role={session.role} />
     ),
     projets: <Projets token={session.token} role={session.role} />,
-    taches: <Taches token={session.token} role={session.role} />,
+    taches: <Taches token={session.token} role={session.role} firstName={session.firstName ?? ''} lastName={session.lastName ?? ''} />,
     calendrier: <Calendrier token={session.token} role={session.role} />,
     ressources: <Ressources token={session.token} role={session.role} />,
     rapports: <Rapports />,
-    budgets: <Budgets />,
+    budgets: <Budgets token={session.token} />,
     performance: <Performance />,
-    notifications: <Notifications />,
-    parametres: <Parametres email={session.email} role={session.role} firstName={session.firstName ?? ''} lastName={session.lastName ?? ''} />,
+    notifications: <Notifications token={session.token} onNavigate={setActiveView} />,
+    parametres: <Parametres userId={session.userId} token={session.token} email={session.email} role={session.role} firstName={session.firstName ?? ''} lastName={session.lastName ?? ''} />,
     utilisateurs: <Utilisateurs token={session.token} role={session.role} />,
     'import-pdf': <PdfImport token={session.token} />,
     gantt: <GanttView token={session.token} role={session.role} />,
@@ -124,11 +124,9 @@ export default function Home() {
           onToggleTheme={handleToggleTheme}
         />
         <div className="content">
-          {(Object.keys(views) as View[]).map((view) => (
-            <div key={view} className={`view ${activeView === view ? 'active' : ''}`}>
-              {views[view]}
-            </div>
-          ))}
+          <div key={activeView} className="view active">
+            {views[activeView]}
+          </div>
         </div>
       </main>
     </div>

@@ -72,12 +72,14 @@ export default function TaskModal({
 
     try {
       await onSave?.(form);
-      onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save task.');
-    } finally {
       setLoading(false);
+      return;
     }
+
+    setLoading(false);
+    onClose();
   };
 
   if (typeof document === 'undefined') return null;

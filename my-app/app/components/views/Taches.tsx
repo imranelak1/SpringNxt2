@@ -10,6 +10,8 @@ import type { AppRole, Task, UserSummary, Project } from '../../lib/types';
 interface TachesProps {
   token: string;
   role: AppRole;
+  firstName?: string;
+  lastName?: string;
 }
 
 type ViewMode = 'Kanban' | 'List';
@@ -108,7 +110,7 @@ function getAssigneeInitials(email: string | null) {
     .join('');
 }
 
-export default function Taches({ token, role }: TachesProps) {
+export default function Taches({ token, role, firstName = '', lastName = '' }: TachesProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('Kanban');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedPriority, setSelectedPriority] = useState('ALL');
@@ -362,6 +364,7 @@ export default function Taches({ token, role }: TachesProps) {
             project: selectedTask.projectName ?? 'No project',
           }}
           token={token}
+          userInitials={`${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase() || 'ME'}
           onProgressSave={(progress) => handleProgressSave(selectedTask.id, progress)}
           onClose={() => setSelectedTask(null)}
         />

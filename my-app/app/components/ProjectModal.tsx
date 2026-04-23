@@ -21,6 +21,7 @@ export interface ProjectData {
   status: string;
   priority: string;
   team: string[];
+  githubRepo: string;
 }
 
 const defaultProject: ProjectData = {
@@ -33,6 +34,7 @@ const defaultProject: ProjectData = {
   status: 'active',
   priority: 'medium',
   team: [],
+  githubRepo: '',
 };
 
 export default function ProjectModal({
@@ -67,12 +69,14 @@ export default function ProjectModal({
 
     try {
       await onSave?.(form);
-      onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save project.');
-    } finally {
       setLoading(false);
+      return;
     }
+
+    setLoading(false);
+    onClose();
   };
 
   const hs = healthScore();
@@ -177,6 +181,18 @@ export default function ProjectModal({
                 <option value="high">High</option>
                 <option value="critical">Critical</option>
               </select>
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">GitHub repository</label>
+            <input
+              className="form-input"
+              placeholder="owner/repo or https://github.com/owner/repo"
+              value={form.githubRepo}
+              onChange={(event) => set('githubRepo', event.target.value)}
+            />
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Link a repo to receive push and PR notifications in-platform.
             </div>
           </div>
           {hs !== null ? (

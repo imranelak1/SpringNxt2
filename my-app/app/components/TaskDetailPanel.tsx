@@ -20,16 +20,11 @@ interface TaskDetailPanelProps {
     project: string;
   };
   token: string;
+  userInitials?: string;
   onProgressSave: (progress: number) => Promise<void>;
   onClose: () => void;
 }
 
-const history = [
-  { text: 'Status changed from "Todo" to "In Progress"', time: 'Today 09:12' },
-  { text: 'Assigned to Hassan Benjelloun', time: 'Yesterday 16:30' },
-  { text: 'Priority changed to "High"', time: 'Yesterday 14:00' },
-  { text: 'Task created', time: 'Mar 1 11:45' },
-];
 
 function formatCommentTime(createdAt: string) {
   const date = new Date(createdAt);
@@ -56,7 +51,7 @@ function initialsFromName(name: string) {
   );
 }
 
-export default function TaskDetailPanel({ task, token, onProgressSave, onClose }: TaskDetailPanelProps) {
+export default function TaskDetailPanel({ task, token, userInitials = 'ME', onProgressSave, onClose }: TaskDetailPanelProps) {
   const [progress, setProgress] = useState(task.progress);
   const [progressDirty, setProgressDirty] = useState(false);
   const [savingProgress, setSavingProgress] = useState(false);
@@ -66,7 +61,7 @@ export default function TaskDetailPanel({ task, token, onProgressSave, onClose }
   const [loadingComments, setLoadingComments] = useState(true);
   const [commentError, setCommentError] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
-  const [tags, setTags] = useState(['API', 'Paiement', 'Sprint 9']);
+  const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
@@ -286,7 +281,7 @@ export default function TaskDetailPanel({ task, token, onProgressSave, onClose }
                 className="av"
                 style={{ width: '26px', height: '26px', fontSize: '9px', background: 'linear-gradient(135deg,#667eea,#764ba2)', flexShrink: 0 }}
               >
-                ME
+                {userInitials}
               </div>
               <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
                 <input
@@ -310,13 +305,9 @@ export default function TaskDetailPanel({ task, token, onProgressSave, onClose }
 
           <div className="task-panel-section">
             <div className="task-panel-section-title">Historique des modifications</div>
-            {history.map((h, i) => (
-              <div key={i} className="hist-item">
-                <div className="hist-dot"></div>
-                <div className="hist-text">{h.text}</div>
-                <div className="hist-time">{h.time}</div>
-              </div>
-            ))}
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Aucun historique disponible.
+            </div>
           </div>
         </div>
       </div>

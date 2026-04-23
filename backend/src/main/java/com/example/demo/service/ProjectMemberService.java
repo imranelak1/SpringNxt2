@@ -23,6 +23,7 @@ public class ProjectMemberService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Transactional
     public ProjectMemberResponse addMember(ProjectMemberRequest request) {
@@ -48,6 +49,13 @@ public class ProjectMemberService {
                 user.getFirstName(),
                 project.getName(),
                 request.getRole() != null ? request.getRole().name() : "CONTRIBUTOR");
+        notificationService.create(
+                user.getId(),
+                "PROJECT_MEMBER_ADDED",
+                "Added to project: " + project.getName(),
+                "You have been added to \"" + project.getName() + "\" as " +
+                        (request.getRole() != null ? request.getRole().name() : "CONTRIBUTOR") + ".",
+                "projets");
 
         return response;
     }

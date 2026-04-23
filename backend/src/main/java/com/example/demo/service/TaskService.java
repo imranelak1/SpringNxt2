@@ -34,6 +34,7 @@ public class TaskService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Transactional
     public TaskResponse createTask(TaskRequest request) {
@@ -64,6 +65,12 @@ public class TaskService {
                     task.getTitle(),
                     project.getName(),
                     request.getDueDate() != null ? request.getDueDate().toString() : null);
+            notificationService.create(
+                    assignee.getId(),
+                    "TASK_ASSIGNED",
+                    "Task assigned: " + task.getTitle(),
+                    "You have been assigned to \"" + task.getTitle() + "\" in project " + project.getName() + ".",
+                    "taches");
         }
 
         return response;
@@ -171,6 +178,12 @@ public class TaskService {
                     task.getTitle(),
                     project.getName(),
                     request.getDueDate() != null ? request.getDueDate().toString() : null);
+            notificationService.create(
+                    newAssignee.getId(),
+                    "TASK_ASSIGNED",
+                    "Task assigned: " + task.getTitle(),
+                    "You have been assigned to \"" + task.getTitle() + "\" in project " + project.getName() + ".",
+                    "taches");
         }
 
         // Notify assignee if status changed
@@ -183,6 +196,12 @@ public class TaskService {
                     project.getName(),
                     oldStatus.name(),
                     newStatus.name());
+            notificationService.create(
+                    newAssignee.getId(),
+                    "TASK_STATUS_CHANGED",
+                    "Task updated: " + task.getTitle(),
+                    "Status changed from " + oldStatus.name() + " to " + newStatus.name() + " on \"" + task.getTitle() + "\".",
+                    "taches");
         }
 
         return response;

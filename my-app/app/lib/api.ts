@@ -1,4 +1,5 @@
 import type {
+  AppNotification,
   AuthResponse,
   AuthSession,
   CalendarEvent,
@@ -120,6 +121,7 @@ export async function login(email: string, password: string): Promise<AuthSessio
   );
 
   return {
+    userId: response.userId,
     token: response.token,
     email: response.email,
     role: mapRole(response.role),
@@ -393,4 +395,20 @@ export function deleteUser(token: string, userId: number) {
     },
     token,
   );
+}
+
+export function getNotifications(token: string) {
+  return request<AppNotification[]>('/api/notifications', {}, token);
+}
+
+export function getUnreadCount(token: string) {
+  return request<{ count: number }>('/api/notifications/unread-count', {}, token);
+}
+
+export function markNotificationRead(token: string, id: number) {
+  return request<void>(`/api/notifications/${id}/read`, { method: 'POST' }, token);
+}
+
+export function markAllNotificationsRead(token: string) {
+  return request<void>('/api/notifications/read-all', { method: 'POST' }, token);
 }

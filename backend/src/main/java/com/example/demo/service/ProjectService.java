@@ -27,6 +27,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest request) {
@@ -40,6 +41,7 @@ public class ProjectService {
                 .endDate(request.getEndDate())
                 .budget(request.getBudget())
                 .progressPercentage(request.getProgressPercentage())
+                .githubRepo(normalizeGithubRepo(request.getGithubRepo()))
                 .build();
 
         return mapToResponse(projectRepository.save(project));
@@ -108,21 +110,22 @@ public class ProjectService {
         project.setStartDate(request.getStartDate());
         project.setEndDate(request.getEndDate());
         project.setBudget(request.getBudget());
+        project.setGithubRepo(normalizeGithubRepo(request.getGithubRepo()));
         project.setProgressPercentage(
                 request.getProgressPercentage() != null ? request.getProgressPercentage() : project.getProgressPercentage());
 
         ProjectResponse response = mapToResponse(projectRepository.save(project));
 
         if (oldStatus != newStatus) {
-            List<String> memberEmails = projectMemberRepository.findByProjectId(id)
-                    .stream()
-                    .map(pm -> pm.getUser().getEmail())
-                    .toList();
-            emailService.sendProjectStatusChangedEmail(
-                    project.getName(),
-                    oldStatus.name(),
-                    newStatus.name(),
-                    memberEmails);
+            var members = projectMemberRepository.findByProjectId(id);
+            List<String> memberEmails = members.stream().map(pm -> pm.getUser().getEmail()).toList();
+            emailService.sendProjectStatusChangedEmail(project.getName(), oldStatus.name(), newStatus.name(), memberEmails);
+            members.forEach(pm -> notificationService.create(
+                    pm.getUser().getId(),
+                    "PROJECT_STATUS_CHANGED",
+                    "Project status updated: " + project.getName(),
+                    "\"" + project.getName() + "\" status changed from " + oldStatus.name() + " to " + newStatus.name() + ".",
+                    "projets"));
         }
 
         return response;
@@ -160,6 +163,16 @@ public class ProjectService {
                 .createdAt(project.getCreatedAt())
                 .taskCount(project.getTasks() != null ? project.getTasks().size() : 0)
                 .memberCount(project.getMembers() != null ? project.getMembers().size() : 0)
+                .githubRepo(project.getGithubRepo())
                 .build();
+    }
+
+    private String normalizeGithubRepo(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        // Accept full URL or owner/repo — always store as owner/repo
+        String s = raw.trim().replaceAll("/$", "");
+        if (s.startsWith("https://github.com/")) s = s.substring("https://github.com/".length());
+        if (s.startsWith("github.com/")) s = s.substring("github.com/".length());
+        return s;
     }
 }

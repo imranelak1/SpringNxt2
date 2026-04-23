@@ -1,100 +1,193 @@
 'use client';
-import { useState } from 'react';
 
-export default function Notifications() {
-    const [toggles, setToggles] = useState({
-        delais: true, surcharge: true, commentaires: true,
-        resume: true, budgets: true, email: false,
-    });
+import { useEffect, useState } from 'react';
+import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../lib/api';
+import type { AppNotification, View } from '../../lib/types';
 
-    const toggle = (key: keyof typeof toggles) => setToggles(t => ({ ...t, [key]: !t[key] }));
+interface NotificationsProps {
+  token: string;
+  onNavigate: (view: View) => void;
+}
 
-    return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-                <div style={{ flex: 1 }}>
-                    <div className="section-title" style={{ margin: 0 }}>Notifications</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>8 non lues</div>
-                </div>
-                <button className="btn btn-ghost btn-sm">Tout marquer lu</button>
-                <button className="btn btn-ghost btn-sm">Paramètres notifs ⚙</button>
-            </div>
+const typeIcon: Record<string, string> = {
+  TASK_ASSIGNED: '📋',
+  TASK_STATUS_CHANGED: '🔄',
+  PROJECT_MEMBER_ADDED: '👥',
+  PROJECT_STATUS_CHANGED: '📁',
+  GITHUB_PUSH: '⬆',
+  GITHUB_PR: '⤵',
+};
 
-            <div className="grid-rl">
-                <div className="col-stack">
-                    <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', marginBottom: '6px' }}>Non lues</div>
-                    <div className="card">
-                        <div className="notif-item unread">
-                            <div className="notif-ico" style={{ background: 'rgba(255,107,107,0.1)' }}>⚠</div>
-                            <div style={{ flex: 1 }}><div className="notif-title">Délai critique — Application Mobile</div><div className="notif-desc">Livraison dans 11 jours. 3 tâches critiques toujours non assignées. Action requise.</div></div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}><div className="notif-time">10 min</div><div className="unread-dot"></div></div>
-                        </div>
-                        <div className="notif-item unread">
-                            <div className="notif-ico" style={{ background: 'rgba(255,107,107,0.1)' }}>👥</div>
-                            <div style={{ flex: 1 }}><div className="notif-title">Surcharge détectée — Karima Tahiri</div><div className="notif-desc">Charge à 138% cette semaine. L'IA recommande de réaffecter 2 tâches à Youssef El Amrani.</div></div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}><div className="notif-time">1h</div><div className="unread-dot"></div></div>
-                        </div>
-                        <div className="notif-item unread">
-                            <div className="notif-ico" style={{ background: 'rgba(255,203,71,0.1)' }}>💰</div>
-                            <div style={{ flex: 1 }}><div className="notif-title">Budget App Mobile dépassé</div><div className="notif-desc">Consommation à 108% (194 000 MAD / 180 000 MAD). Voir rapport budgétaire.</div></div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}><div className="notif-time">2h</div><div className="unread-dot"></div></div>
-                        </div>
-                        <div className="notif-item unread">
-                            <div className="notif-ico" style={{ background: 'rgba(79,255,176,0.1)' }}>✅</div>
-                            <div style={{ flex: 1 }}><div className="notif-title">Sprint #8 terminé avec succès</div><div className="notif-desc">Hassan Benjelloun a clôturé le sprint avec 24/25 tâches complétées. Rapport disponible.</div></div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}><div className="notif-time">3h</div><div className="unread-dot"></div></div>
-                        </div>
-                        <div className="notif-item unread">
-                            <div className="notif-ico" style={{ background: 'rgba(61,138,255,0.1)' }}>📋</div>
-                            <div style={{ flex: 1 }}><div className="notif-title">Nouveau commentaire — Refonte Site Web</div><div className="notif-desc">Client TechCorp : &ldquo;Super progression sur la page d'accueil ! Quelques ajustements couleurs.&rdquo;</div></div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}><div className="notif-time">4h</div><div className="unread-dot"></div></div>
-                        </div>
-                    </div>
+const typeColor: Record<string, string> = {
+  TASK_ASSIGNED: 'rgba(61,138,255,0.1)',
+  TASK_STATUS_CHANGED: 'rgba(167,139,250,0.1)',
+  PROJECT_MEMBER_ADDED: 'rgba(79,255,176,0.1)',
+  PROJECT_STATUS_CHANGED: 'rgba(255,203,71,0.1)',
+  GITHUB_PUSH: 'rgba(255,255,255,0.06)',
+  GITHUB_PR: 'rgba(255,255,255,0.06)',
+};
 
-                    <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', marginBottom: '6px', marginTop: '6px' }}>Lues</div>
-                    <div className="card">
-                        <div className="notif-item" style={{ opacity: 0.65 }}>
-                            <div className="notif-ico" style={{ background: 'rgba(79,255,176,0.08)' }}>🎉</div>
-                            <div style={{ flex: 1 }}><div className="notif-title">Projet Dashboard Atlas livré</div><div className="notif-desc">Groupe Atlas a validé la livraison. Satisfaction 5/5.</div></div>
-                            <div className="notif-time">Hier</div>
-                        </div>
-                        <div className="notif-item" style={{ opacity: 0.65 }}>
-                            <div className="notif-ico" style={{ background: 'rgba(167,139,250,0.08)' }}>🔔</div>
-                            <div style={{ flex: 1 }}><div className="notif-title">Rappel — Réunion TechCorp demain</div><div className="notif-desc">Réunion de suivi Mar 4 Mars à 10h00 via Zoom.</div></div>
-                            <div className="notif-time">Hier</div>
-                        </div>
-                        <div className="notif-item" style={{ opacity: 0.65 }}>
-                            <div className="notif-ico" style={{ background: 'rgba(255,203,71,0.08)' }}>📊</div>
-                            <div style={{ flex: 1 }}><div className="notif-title">Rapport mensuel Fév 2025 généré</div><div className="notif-desc">Le rapport automatique IA est prêt. CA : 121 000 MAD.</div></div>
-                            <div className="notif-time">1 Mar</div>
-                        </div>
-                    </div>
-                </div>
+function formatTime(createdAt: string) {
+  const date = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(date);
+}
 
-                <div className="col-stack">
-                    <div className="card">
-                        <div className="card-header"><div className="card-title">Préférences de notification</div></div>
-                        <div style={{ padding: '4px 0' }}>
-                            {[
-                                { key: 'delais' as const, label: 'Alertes délais critiques', desc: 'Notifier si < 7 jours avant échéance' },
-                                { key: 'surcharge' as const, label: 'Surcharge ressources', desc: 'Alerte si charge > 100%' },
-                                { key: 'commentaires' as const, label: 'Commentaires clients', desc: 'Nouveaux messages et retours' },
-                                { key: 'resume' as const, label: 'Résumé quotidien IA', desc: 'Synthèse chaque matin à 8h' },
-                                { key: 'budgets' as const, label: 'Dépassements budgétaires', desc: 'Alerte si > 90% budget consommé' },
-                                { key: 'email' as const, label: 'Notifications email', desc: 'Envoyer par email également' },
-                            ].map(({ key, label, desc }) => (
-                                <div key={key} className="settings-row">
-                                    <div className="settings-info">
-                                        <div className="settings-label">{label}</div>
-                                        <div className="settings-desc">{desc}</div>
-                                    </div>
-                                    <div className={`toggle ${toggles[key] ? 'on' : ''}`} onClick={() => toggle(key)}></div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
+export default function Notifications({ token, onNavigate }: NotificationsProps) {
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [markingAll, setMarkingAll] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await getNotifications(token);
+        if (isMounted) setNotifications(data);
+      } catch (e) {
+        if (isMounted) setError(e instanceof Error ? e.message : 'Unable to load notifications.');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => { isMounted = false; };
+  }, [token]);
+
+  const handleMarkRead = async (n: AppNotification) => {
+    try {
+      if (!n.read) {
+        await markNotificationRead(token, n.id);
+        setNotifications((current) =>
+          current.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+        );
+      }
+      if (n.link) {
+        onNavigate(n.link as View);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    setMarkingAll(true);
+    try {
+      await markAllNotificationsRead(token);
+      setNotifications((current) => current.map((n) => ({ ...n, read: true })));
+    } catch {
+      // ignore
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const unread = notifications.filter((n) => !n.read);
+  const read = notifications.filter((n) => n.read);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+        <div style={{ flex: 1 }}>
+          <div className="section-title" style={{ margin: 0 }}>Notifications</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            {loading ? 'Loading...' : `${unread.length} unread`}
+          </div>
         </div>
-    );
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => void handleMarkAllRead()}
+          disabled={markingAll || unread.length === 0}
+        >
+          Mark all read
+        </button>
+      </div>
+
+      {error ? (
+        <div className="card">
+          <div className="card-body" style={{ color: 'var(--accent3)' }}>{error}</div>
+        </div>
+      ) : loading ? (
+        <div className="card">
+          <div className="card-body" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading...</div>
+        </div>
+      ) : notifications.length === 0 ? (
+        <div className="card">
+          <div className="card-body" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+            No notifications yet. They will appear here when tasks are assigned to you or project statuses change.
+          </div>
+        </div>
+      ) : (
+        <div className="col-stack">
+          {unread.length > 0 && (
+            <>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                Unread
+              </div>
+              <div className="card">
+                {unread.map((n) => (
+                  <div
+                    key={n.id}
+                    className="notif-item unread"
+                    onClick={() => void handleMarkRead(n)}
+                    style={{ cursor: n.link ? 'pointer' : 'default' }}
+                  >
+                    <div className="notif-ico" style={{ background: typeColor[n.type] ?? 'rgba(255,255,255,0.05)' }}>
+                      {typeIcon[n.type] ?? '🔔'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="notif-title">{n.title}</div>
+                      <div className="notif-desc">{n.body}</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                      <div className="notif-time">{formatTime(n.createdAt)}</div>
+                      <div className="unread-dot"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {read.length > 0 && (
+            <>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', marginBottom: '6px', marginTop: '6px' }}>
+                Read
+              </div>
+              <div className="card">
+                {read.map((n) => (
+                  <div
+                    key={n.id}
+                    className="notif-item"
+                    style={{ opacity: 0.65, cursor: n.link ? 'pointer' : 'default' }}
+                    onClick={() => n.link && onNavigate(n.link as View)}
+                  >
+                    <div className="notif-ico" style={{ background: typeColor[n.type] ?? 'rgba(255,255,255,0.05)' }}>
+                      {typeIcon[n.type] ?? '🔔'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="notif-title">{n.title}</div>
+                      <div className="notif-desc">{n.body}</div>
+                    </div>
+                    <div className="notif-time">{formatTime(n.createdAt)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

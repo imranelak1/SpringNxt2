@@ -16,6 +16,7 @@ export type View =
 export type AppRole = 'admin' | 'pm' | 'employee';
 
 export interface AuthSession {
+  userId: number;
   token: string;
   email: string;
   role: AppRole;
@@ -25,11 +26,22 @@ export interface AuthSession {
 }
 
 export interface AuthResponse {
+  userId: number;
   token: string;
   email: string;
   role: string;
   firstName: string;
   lastName: string;
+}
+
+export interface AppNotification {
+  id: number;
+  type: string;
+  title: string;
+  body: string;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface DashboardProjectSummary {
@@ -64,6 +76,7 @@ export interface Project {
   createdAt: string;
   taskCount: number;
   memberCount: number;
+  githubRepo: string | null;
 }
 
 export interface Task {
@@ -172,6 +185,7 @@ export interface CreateProjectInput {
   endDate: string | null;
   budget: number | null;
   progressPercentage: number;
+  githubRepo: string | null;
 }
 
 export interface CreateTaskInput {

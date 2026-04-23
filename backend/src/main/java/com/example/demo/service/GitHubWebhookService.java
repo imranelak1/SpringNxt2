@@ -69,10 +69,11 @@ public class GitHubWebhookService {
 
         String repoFullName = payload.path("repository").path("full_name").asText(null);
         String pusher = payload.path("pusher").path("name").asText("Someone");
-        int commitCount = payload.path("commits").size();
-        if (repoFullName == null || commitCount == 0) return;
+        JsonNode headCommit = payload.path("head_commit");
+        if (repoFullName == null || headCommit.isMissingNode() || headCommit.isNull()) return;
+        int commitCount = Math.max(payload.path("commits").size(), 1);
 
-        String lastMessage = payload.path("head_commit").path("message").asText("").lines().findFirst().orElse("");
+        String lastMessage = headCommit.path("message").asText("").lines().findFirst().orElse("");
 
         projectRepository.findByGithubRepo(repoFullName).ifPresent(project -> {
             String title = pusher + " pushed " + commitCount + " commit" + (commitCount > 1 ? "s" : "") + " to " + project.getName();

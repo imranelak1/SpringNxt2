@@ -1,12 +1,17 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.NotificationResponse;
+import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.model.Notification;
 import com.example.demo.model.Project;
 import com.example.demo.model.ProjectStatus;
 import com.example.demo.model.Task;
 import com.example.demo.model.TaskStatus;
+import com.example.demo.model.User;
+import com.example.demo.repository.NotificationRepository;
 import com.example.demo.repository.ProjectRepository;
 import com.example.demo.repository.TaskRepository;
+import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +30,24 @@ public class NotificationService {
 
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+
+    @Transactional
+    public NotificationResponse create(Long userId, String type, String title, String body, String link) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        Notification notification = notificationRepository.save(Notification.builder()
+                .user(user)
+                .type(type)
+                .title(title)
+                .body(body)
+                .link(link)
+                .build());
+
+        return mapToResponse(notification);
+    }
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> getNotifications() {
@@ -123,5 +146,16 @@ public class NotificationService {
         long days = hours / 24;
         if (days < 7) return days + "j";
         return (days / 7) + " sem";
+    }
+
+    private NotificationResponse mapToResponse(Notification notification) {
+        return NotificationResponse.builder()
+                .id(String.valueOf(notification.getId()))
+                .type(notification.getType())
+                .title(notification.getTitle())
+                .description(notification.getBody())
+                .timeAgo(timeAgo(notification.getCreatedAt()))
+                .read(notification.isRead())
+                .build();
     }
 }

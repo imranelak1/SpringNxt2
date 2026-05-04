@@ -45,6 +45,9 @@ public class Project {
     @Column(nullable = false)
     private Integer progressPercentage;
 
+    @Column(length = 255)
+    private String githubRepo;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

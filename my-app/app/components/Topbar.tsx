@@ -17,6 +17,7 @@ const titles: Record<View, string> = {
   utilisateurs: 'Utilisateurs',
   'import-pdf': 'PDF Import',
   gantt: 'Vue Gantt',
+  simulation: 'Simulation',
 };
 
 interface TopbarProps {

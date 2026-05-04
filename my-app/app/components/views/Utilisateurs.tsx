@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import UserModal, { type UserFormData } from '../UserModal';
 import { createUser, deleteUser, getUsers, updateUser } from '../../lib/api';
 import { SkeletonTable } from '../Skeleton';
+import { useAlert } from '../AlertProvider';
 import type { AppRole, UserSummary } from '../../lib/types';
 
 interface UtilisateursProps {
@@ -36,6 +37,7 @@ function formatDate(dateValue: string) {
 }
 
 export default function Utilisateurs({ token, role }: UtilisateursProps) {
+  const alerts = useAlert();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [filterRole, setFilterRole] = useState('ALL');
@@ -111,6 +113,7 @@ export default function Utilisateurs({ token, role }: UtilisateursProps) {
     });
 
     setUsers((current) => [createdUser, ...current]);
+    alerts.success('Utilisateur invité', `${createdUser.firstName} ${createdUser.lastName} a été ajouté.`);
   };
 
   const handleUpdateUser = async (user: UserFormData) => {
@@ -135,11 +138,29 @@ export default function Utilisateurs({ token, role }: UtilisateursProps) {
 
     setUsers((current) => current.map((item) => (item.id === updatedUser.id ? updatedUser : item)));
     setEditingUser(null);
+    alerts.success('Utilisateur mis à jour', `${updatedUser.firstName} ${updatedUser.lastName} a été modifié.`);
   };
 
   const handleDeleteUser = async (userId: number) => {
-    await deleteUser(token, userId);
-    setUsers((current) => current.filter((user) => user.id !== userId));
+    const user = users.find((item) => item.id === userId);
+    const confirmed = await alerts.confirm({
+      title: 'Supprimer cet utilisateur ?',
+      message: user ? `${user.firstName} ${user.lastName} perdra l'accès à l'application.` : 'Cette action est définitive.',
+      confirmText: 'Supprimer',
+      tone: 'warning',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteUser(token, userId);
+      setUsers((current) => current.filter((item) => item.id !== userId));
+      alerts.success('Utilisateur supprimé', user ? `${user.firstName} ${user.lastName} a été retiré.` : undefined);
+    } catch (deleteError) {
+      alerts.error('Suppression impossible', deleteError instanceof Error ? deleteError.message : 'Réessayez dans un instant.');
+    }
   };
 
   if (role === 'employee') {

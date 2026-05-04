@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import TaskDetailPanel from '../TaskDetailPanel';
 import TaskModal, { type TaskData } from '../TaskModal';
 import AiDecomposeModal from '../AiDecomposeModal';
+import { useAlert } from '../AlertProvider';
 import { createTask, deleteTask, getTasks, getUsers, getProjects, updateTask } from '../../lib/api';
 import { SkeletonTable } from '../Skeleton';
 import type { AppRole, Task, UserSummary, Project } from '../../lib/types';
@@ -106,6 +107,7 @@ function getAssigneeInitials(email: string | null) {
 }
 
 export default function Taches({ token, role }: TachesProps) {
+  const alerts = useAlert();
   const [viewMode, setViewMode] = useState<ViewMode>('Kanban');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedPriority, setSelectedPriority] = useState('ALL');
@@ -214,6 +216,7 @@ export default function Taches({ token, role }: TachesProps) {
     });
 
     setTasks((current) => [createdTask, ...current]);
+    alerts.success('Tâche créée', `"${createdTask.title}" a été ajoutée au tableau.`);
   };
 
   const handleAddDecomposedTasks = async (titles: string[], projectId: number) => {
@@ -277,12 +280,53 @@ export default function Taches({ token, role }: TachesProps) {
 
     setTasks((current) => current.map((task) => (task.id === updatedTask.id ? updatedTask : task)));
     setEditingTask(null);
+    alerts.success('Tâche mise à jour', `"${updatedTask.title}" a été modifiée.`);
   };
 
   const handleDeleteTask = async (taskId: number) => {
-    await deleteTask(token, taskId);
-    setTasks((current) => current.filter((task) => task.id !== taskId));
-    setSelectedTask((current) => (current?.id === taskId ? null : current));
+    const task = tasks.find((item) => item.id === taskId);
+    const confirmed = await alerts.confirm({
+      title: 'Supprimer cette tâche ?',
+      message: task ? `"${task.title}" sera supprimée définitivement.` : 'Cette action est définitive.',
+      confirmText: 'Supprimer',
+      tone: 'warning',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteTask(token, taskId);
+      setTasks((current) => current.filter((item) => item.id !== taskId));
+      setSelectedTask((current) => (current?.id === taskId ? null : current));
+      alerts.success('Tâche supprimée', task ? `"${task.title}" a été retirée.` : undefined);
+    } catch (deleteError) {
+      alerts.error('Suppression impossible', deleteError instanceof Error ? deleteError.message : 'Réessayez dans un instant.');
+    }
+  };
+
+  const handleSaveSelectedTaskProgress = async (progress: number) => {
+    if (!selectedTask) {
+      return;
+    }
+
+    const updatedTask = await updateTask(token, selectedTask.id, {
+      title: selectedTask.title,
+      description: selectedTask.description,
+      status: selectedTask.status,
+      priority: selectedTask.priority,
+      startDate: selectedTask.startDate,
+      dueDate: selectedTask.dueDate,
+      estimatedHours: selectedTask.estimatedHours,
+      actualHours: progress > 0 ? progress : null,
+      projectId: selectedTask.projectId!,
+      assigneeId: selectedTask.assigneeId,
+    });
+
+    setTasks((current) => current.map((task) => (task.id === updatedTask.id ? updatedTask : task)));
+    setSelectedTask(updatedTask);
+    alerts.success('Progression sauvegardée', `Avancement mis à jour à ${progress}%.`);
   };
 
   const handleDragStart = (e: React.DragEvent, task: Task) => {
@@ -404,6 +448,7 @@ export default function Taches({ token, role }: TachesProps) {
       {selectedTask ? (
         <TaskDetailPanel
           task={{
+            id: selectedTask.id,
             title: selectedTask.title,
             tag: selectedTask.projectName ?? 'Task',
             tagCls: 'tt-dev',
@@ -415,6 +460,8 @@ export default function Taches({ token, role }: TachesProps) {
             progress: estimateProgress(selectedTask),
             project: selectedTask.projectName ?? 'No project',
           }}
+          token={token}
+          onProgressSave={handleSaveSelectedTaskProgress}
           onClose={() => setSelectedTask(null)}
         />
       ) : null}

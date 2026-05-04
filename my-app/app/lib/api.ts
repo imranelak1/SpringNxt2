@@ -23,6 +23,7 @@ import type {
   Project,
   ReportsResponse,
   Task,
+  TaskComment,
   UserSummary,
 } from './types';
 
@@ -114,6 +115,7 @@ export async function login(email: string, password: string): Promise<AuthSessio
   );
 
   return {
+    userId: response.userId,
     token: response.token,
     email: response.email,
     role: mapRole(response.role),
@@ -269,6 +271,21 @@ export function createTask(token: string, input: CreateTaskInput) {
     {
       method: 'POST',
       body: JSON.stringify(input),
+    },
+    token,
+  );
+}
+
+export function getTaskComments(token: string, taskId: number) {
+  return request<TaskComment[]>(`/api/tasks/${taskId}/comments`, {}, token);
+}
+
+export function createTaskComment(token: string, taskId: number, text: string) {
+  return request<TaskComment>(
+    `/api/tasks/${taskId}/comments`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ text }),
     },
     token,
   );

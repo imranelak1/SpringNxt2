@@ -5,7 +5,6 @@ import { simulateProject, createProject, createTask } from '../../lib/api';
 import type {
   ProjectSimulationResponse,
   SimPhase,
-  SimRisk,
   View,
 } from '../../lib/types';
 
@@ -217,6 +216,7 @@ export default function Simulation({ token, onNavigate }: SimulationProps) {
         budget: result.totalBudget ?? null,
         spentAmount: null,
         progressPercentage: 0,
+        githubRepo: null,
       });
 
       // Create all tasks across all phases
@@ -301,7 +301,7 @@ export default function Simulation({ token, onNavigate }: SimulationProps) {
           </div>
 
           <div className="form-group" style={{ marginBottom: '24px' }}>
-            <label className="form-label">Taille de l'équipe</label>
+            <label className="form-label">Taille de l&apos;équipe</label>
             <div style={{ display: 'flex', gap: '8px' }}>
               {[1, 2, 3, 4, 5, 8, 10].map((n) => (
                 <button

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import ProjectModal, { type ProjectData } from '../ProjectModal';
 import { createProject, deleteProject, getProjects, updateProject, analyzeProjectRisk } from '../../lib/api';
 import { SkeletonTable } from '../Skeleton';
+import { useAlert } from '../AlertProvider';
 import type { AppRole, Project } from '../../lib/types';
 
 interface ProjetsProps {
@@ -45,6 +46,7 @@ function getStatusClass(status: string) {
 }
 
 export default function Projets({ token, role, isActive }: ProjetsProps) {
+  const alerts = useAlert();
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [projects, setProjects] = useState<Project[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -129,9 +131,11 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
       budget: project.budget ? Number(project.budget) : null,
       spentAmount: project.spentAmount ? Number(project.spentAmount) : null,
       progressPercentage: 0,
+      githubRepo: project.githubRepo || null,
     });
 
     setProjects((current) => [createdProject, ...current]);
+    alerts.success('Projet créé', `"${createdProject.name}" est maintenant dans le portfolio.`);
   };
 
   const handleUpdateProject = async (projectData: ProjectData) => {
@@ -161,17 +165,36 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
       budget: projectData.budget ? Number(projectData.budget) : null,
       spentAmount: projectData.spentAmount ? Number(projectData.spentAmount) : null,
       progressPercentage: editingProject.progressPercentage ?? 0,
+      githubRepo: projectData.githubRepo || null,
     });
 
     setProjects((current) =>
       current.map((project) => (project.id === updatedProject.id ? updatedProject : project)),
     );
     setEditingProject(null);
+    alerts.success('Projet mis à jour', `"${updatedProject.name}" a été modifié.`);
   };
 
   const handleDeleteProject = async (projectId: number) => {
-    await deleteProject(token, projectId);
-    setProjects((current) => current.filter((project) => project.id !== projectId));
+    const project = projects.find((item) => item.id === projectId);
+    const confirmed = await alerts.confirm({
+      title: 'Supprimer ce projet ?',
+      message: project ? `"${project.name}" et ses données liées seront supprimés.` : 'Cette action est définitive.',
+      confirmText: 'Supprimer',
+      tone: 'warning',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteProject(token, projectId);
+      setProjects((current) => current.filter((item) => item.id !== projectId));
+      alerts.success('Projet supprimé', project ? `"${project.name}" a été retiré.` : undefined);
+    } catch (deleteError) {
+      alerts.error('Suppression impossible', deleteError instanceof Error ? deleteError.message : 'Réessayez dans un instant.');
+    }
   };
 
   if (loading) {

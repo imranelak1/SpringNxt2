@@ -41,6 +41,7 @@ public class ProjectService {
                 .budget(request.getBudget())
                 .spentAmount(request.getSpentAmount())
                 .progressPercentage(request.getProgressPercentage())
+                .githubRepo(request.getGithubRepo())
                 .build();
 
         return mapToResponse(projectRepository.save(project));
@@ -112,6 +113,7 @@ public class ProjectService {
         project.setSpentAmount(request.getSpentAmount());
         project.setProgressPercentage(
                 request.getProgressPercentage() != null ? request.getProgressPercentage() : project.getProgressPercentage());
+        project.setGithubRepo(request.getGithubRepo());
 
         ProjectResponse response = mapToResponse(projectRepository.save(project));
 
@@ -163,6 +165,7 @@ public class ProjectService {
                 .createdAt(project.getCreatedAt())
                 .taskCount(project.getTasks() != null ? project.getTasks().size() : 0)
                 .memberCount(project.getMembers() != null ? project.getMembers().size() : 0)
+                .githubRepo(project.getGithubRepo())
                 .build();
     }
 }

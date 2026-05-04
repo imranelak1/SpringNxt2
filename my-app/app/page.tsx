@@ -19,6 +19,7 @@ import PdfImport from './components/views/PdfImport';
 import GanttView from './components/views/GanttView';
 import Simulation from './components/views/Simulation';
 import ChatWidget from './components/ChatWidget';
+import { AlertProvider } from './components/AlertProvider';
 import type { AuthSession, View } from './lib/types';
 
 const SESSION_STORAGE_KEY = 'springnxt-session';
@@ -84,7 +85,11 @@ export default function Home() {
   };
 
   if (!session) {
-    return <LoginPage onLogin={handleLogin} />;
+    return (
+      <AlertProvider>
+        <LoginPage onLogin={handleLogin} />
+      </AlertProvider>
+    );
   }
 
   const views: Record<View, React.ReactNode> = {
@@ -100,40 +105,43 @@ export default function Home() {
     performance: <Performance token={session.token} />,
     notifications: <Notifications token={session.token} />,
     parametres: <Parametres token={session.token} email={session.email} role={session.role} firstName={session.firstName ?? ''} lastName={session.lastName ?? ''} onProfileUpdated={(firstName, lastName) => { window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ ...session, firstName, lastName })); setSessionOverride({ ...session, firstName, lastName }); }} />,
-    utilisateurs: <Utilisateurs token={session.token} />,
+    utilisateurs: <Utilisateurs token={session.token} role={session.role} />,
     'import-pdf': <PdfImport token={session.token} />,
     gantt: <GanttView token={session.token} role={session.role} />,
     simulation: <Simulation token={session.token} onNavigate={setActiveView} />,
   };
 
   return (
-    <div className="app">
-      <Sidebar
-        activeView={activeView}
-        onNavigate={setActiveView}
-        onLogout={handleLogout}
-        role={session.role}
-        email={session.email}
-        firstName={session.firstName ?? ''}
-        lastName={session.lastName ?? ''}
-      />
-      <ChatWidget token={session.token} />
-      <main className="main">
-        <Topbar
+    <AlertProvider>
+      <div className="app">
+        <Sidebar
           activeView={activeView}
           onNavigate={setActiveView}
           onLogout={handleLogout}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
+          role={session.role}
+          email={session.email}
+          firstName={session.firstName ?? ''}
+          lastName={session.lastName ?? ''}
         />
-        <div className="content">
-          {(Object.keys(views) as View[]).map((view) => (
-            <div key={view} className={`view ${activeView === view ? 'active' : ''}`}>
-              {views[view]}
-            </div>
-          ))}
-        </div>
-      </main>
-    </div>
+        <ChatWidget token={session.token} />
+        <main className="main">
+          <Topbar
+            activeView={activeView}
+            onNavigate={setActiveView}
+            onLogout={handleLogout}
+            role={session.role}
+            theme={theme}
+            onToggleTheme={handleToggleTheme}
+          />
+          <div className="content">
+            {(Object.keys(views) as View[]).map((view) => (
+              <div key={view} className={`view ${activeView === view ? 'active' : ''}`}>
+                {views[view]}
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    </AlertProvider>
   );
 }

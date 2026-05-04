@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getDashboard } from '../../lib/api';
+import { getDashboard, getAiInsights } from '../../lib/api';
 import { SkeletonStatCards, SkeletonTable, SkeletonCard } from '../Skeleton';
 import type { AppRole, DashboardResponse, View } from '../../lib/types';
 
@@ -59,6 +59,18 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [aiInsights, setAiInsights] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiLoaded, setAiLoaded] = useState(false);
+
+  const loadInsights = () => {
+    if (aiLoading) return;
+    setAiLoading(true);
+    getAiInsights(token)
+      .then((res) => { setAiInsights(res.insights); setAiLoaded(true); })
+      .catch(() => { setAiInsights(['Erreur lors du chargement des insights IA.']); setAiLoaded(true); })
+      .finally(() => setAiLoading(false));
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -202,34 +214,46 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
         </div>
 
         <div className="col-stack">
-          <div className="ai-card">
+          <div className={`ai-card${aiLoading ? ' ai-scan-wrap' : ''}`}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <span className="ai-badge">API</span>
-              <span className="ai-title">Live backend summary</span>
+              <span className={`ai-badge${aiLoading ? ' ai-badge-pulse' : ''}`}>✦ IA</span>
+              <span className="ai-title">Analyse NEXUS-IA</span>
+              {!aiLoaded && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginLeft: 'auto', fontSize: '11px' }}
+                  onClick={loadInsights}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? '…' : 'Générer'}
+                </button>
+              )}
             </div>
-            <div className="ai-insight">
-              <span className="insight-ico">1.</span>
-              <div className="insight-txt">
-                <strong>{data.activeProjects}</strong> active projects are coming from
-                <strong> /api/dashboard</strong>.
+
+            {!aiLoaded && !aiLoading && (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Cliquez sur <strong>Générer</strong> pour obtenir une analyse IA en temps réel
+                basée sur vos données de projets, budgets et équipe.
               </div>
-            </div>
-            <div className="ai-insight">
-              <span className="insight-ico">2.</span>
-              <div className="insight-txt">
-                <strong>{data.completedTasks}</strong> of <strong>{data.totalTasks}</strong> tasks are
-                completed.
+            )}
+
+            {aiLoading && (
+              <div className="ai-thinking">
+                <div className="ai-thinking-dots"><span /><span /><span /></div>
+                <span className="ai-thinking-label">Analyse en cours…</span>
               </div>
-            </div>
-            <div className="ai-insight">
-              <span className="insight-ico">3.</span>
-              <div className="insight-txt">
-                Best current health score:{' '}
-                <strong>
-                  {Math.max(...data.projects.map((project) => project.overallHealthScore ?? 0), 0)}
-                </strong>
+            )}
+
+            {aiLoaded && aiInsights.map((insight, i) => (
+              <div
+                key={i}
+                className="ai-insight ai-insight-animated"
+                style={{ animationDelay: `${i * 140}ms` }}
+              >
+                <span className="insight-ico">{['📊', '⚠', '💡', '🎯'][i] ?? '•'}</span>
+                <div className="insight-txt">{insight}</div>
               </div>
-            </div>
+            ))}
           </div>
 
           <div className="card">

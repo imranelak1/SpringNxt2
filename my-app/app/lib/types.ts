@@ -11,7 +11,8 @@ export type View =
   | 'parametres'
   | 'utilisateurs'
   | 'import-pdf'
-  | 'gantt';
+  | 'gantt'
+  | 'simulation';
 
 export type AppRole = 'admin' | 'pm' | 'employee';
 
@@ -60,6 +61,7 @@ export interface Project {
   startDate: string | null;
   endDate: string | null;
   budget: number | null;
+  spentAmount: number | null;
   progressPercentage: number | null;
   createdAt: string;
   taskCount: number;
@@ -161,6 +163,7 @@ export interface CreateProjectInput {
   startDate: string | null;
   endDate: string | null;
   budget: number | null;
+  spentAmount: number | null;
   progressPercentage: number;
 }
 
@@ -200,4 +203,148 @@ export interface CreateCalendarEventInput {
   description: string;
   eventDate: string;
   type: 'MEETING' | 'DEADLINE' | 'MILESTONE' | 'CUSTOM';
+}
+
+// Project Simulation
+export interface SimTask {
+  title: string;
+  priority: string;
+  estimatedHours: number;
+  role: string;
+}
+
+export interface SimPhase {
+  name: string;
+  weeks: number;
+  tasks: SimTask[];
+}
+
+export interface SimBudgetItem {
+  category: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface SimTeamRole {
+  role: string;
+  count: number;
+  allocationPercentage: number;
+}
+
+export interface SimRisk {
+  level: string;
+  title: string;
+  description: string;
+}
+
+export interface ProjectSimulationResponse {
+  projectName: string;
+  description: string;
+  estimatedWeeks: number;
+  totalBudget: number;
+  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  phases: SimPhase[];
+  budgetBreakdown: SimBudgetItem[];
+  teamRoles: SimTeamRole[];
+  risks: SimRisk[];
+  keyInsights: string[];
+}
+
+// AI
+export interface AiChatResponse {
+  content: string;
+  aiAvailable: boolean;
+}
+
+export interface AiInsightsResponse {
+  insights: string[];
+  aiAvailable: boolean;
+}
+
+export interface AiChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface UpdateProfileInput {
+  firstName: string;
+  lastName: string;
+}
+
+// Budget
+export interface BudgetProjectItem {
+  projectId: number;
+  projectName: string;
+  status: string;
+  budgetAllocated: number;
+  budgetSpent: number;
+  budgetRemaining: number;
+  progressPercentage: number;
+  overBudget: boolean;
+}
+
+export interface BudgetResponse {
+  totalBudget: number;
+  totalSpent: number;
+  totalRemaining: number;
+  overBudgetCount: number;
+  projects: BudgetProjectItem[];
+}
+
+// Performance
+export interface MemberPerformance {
+  userId: number;
+  firstName: string;
+  lastName: string;
+  totalTasks: number;
+  completedTasks: number;
+  onTimeRate: number;
+  grade: string;
+}
+
+export interface WeeklyTaskCount {
+  label: string;
+  count: number;
+}
+
+export interface PerformanceResponse {
+  teamVelocity: number;
+  deliveryRate: number;
+  avgHealthScore: number;
+  overdueTaskCount: number;
+  weeklyCompletedTasks: WeeklyTaskCount[];
+  memberStats: MemberPerformance[];
+}
+
+// Reports
+export interface MonthlyCount {
+  label: string;
+  count: number;
+}
+
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
+export interface ReportsResponse {
+  totalProjects: number;
+  completedProjects: number;
+  activeProjects: number;
+  deliveryRate: number;
+  avgHealthScore: number;
+  totalTasks: number;
+  completedTasks: number;
+  monthlyProjectCounts: MonthlyCount[];
+  projectsByStatus: StatusCount[];
+}
+
+// Notifications
+export interface NotificationItem {
+  id: string;
+  type: 'ALERT' | 'WARNING' | 'SUCCESS' | 'INFO';
+  title: string;
+  description: string;
+  timeAgo: string;
+  read: boolean;
 }

@@ -18,6 +18,7 @@ export interface ProjectData {
   startDate: string;
   endDate: string;
   budget: string;
+  spentAmount: string;
   status: string;
   priority: string;
   team: string[];
@@ -30,6 +31,7 @@ const defaultProject: ProjectData = {
   startDate: '',
   endDate: '',
   budget: '',
+  spentAmount: '',
   status: 'active',
   priority: 'medium',
   team: [],
@@ -148,9 +150,9 @@ export default function ProjectModal({
               />
             </div>
           </div>
-          <div className="form-row-3" style={{ marginBottom: '16px' }}>
+          <div className="form-row" style={{ marginBottom: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Budget</label>
+              <label className="form-label">Budget alloué</label>
               <input
                 className="form-input"
                 type="number"
@@ -159,6 +161,18 @@ export default function ProjectModal({
                 onChange={(event) => set('budget', event.target.value)}
               />
             </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Dépenses réelles</label>
+              <input
+                className="form-input"
+                type="number"
+                placeholder="0"
+                value={form.spentAmount}
+                onChange={(event) => set('spentAmount', event.target.value)}
+              />
+            </div>
+          </div>
+          <div className="form-row" style={{ marginBottom: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Status</label>
               <select className="form-select" value={form.status} onChange={(event) => set('status', event.target.value)}>

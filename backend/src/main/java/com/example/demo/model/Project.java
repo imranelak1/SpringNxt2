@@ -39,6 +39,9 @@ public class Project {
     @Column(precision = 12, scale = 2)
     private BigDecimal budget;
 
+    @Column(precision = 12, scale = 2)
+    private BigDecimal spentAmount;
+
     @Column(nullable = false)
     private Integer progressPercentage;
 

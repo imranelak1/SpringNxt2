@@ -1,6 +1,11 @@
 import type {
+  AiChatResponse,
+  AiInsightsResponse,
   AuthResponse,
   AuthSession,
+  BudgetResponse,
+  ProjectSimulationResponse,
+  UpdateProfileInput,
   CalendarEvent,
   CreateProjectInput,
   CreateCalendarEventInput,
@@ -8,12 +13,15 @@ import type {
   CreateTaskInput,
   CreateUserInput,
   DashboardResponse,
+  NotificationItem,
   PdfImportAnalysis,
   PdfImportCreateInput,
   PdfImportCreateResult,
   PagedResponse,
+  PerformanceResponse,
   ProjectMember,
   Project,
+  ReportsResponse,
   Task,
   UserSummary,
 } from './types';
@@ -32,7 +40,7 @@ function mapRole(role: string): AuthSession['role'] {
   return 'employee';
 }
 
-async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}, token?: string, timeoutMs = 12000): Promise<T> {
   const headers = new Headers(init.headers);
 
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
@@ -46,7 +54,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   const shouldUseInternalTimeout = !init.signal;
   const controller = shouldUseInternalTimeout ? new AbortController() : null;
   const timeoutId = shouldUseInternalTimeout
-    ? window.setTimeout(() => controller?.abort(), 12000)
+    ? window.setTimeout(() => controller?.abort(), timeoutMs)
     : null;
 
   let response: Response;
@@ -361,6 +369,76 @@ export function deleteUser(token: string, userId: number) {
     `/api/users/${userId}`,
     {
       method: 'DELETE',
+    },
+    token,
+  );
+}
+
+export function getBudget(token: string) {
+  return request<BudgetResponse>('/api/budget', {}, token);
+}
+
+export function getPerformance(token: string) {
+  return request<PerformanceResponse>('/api/performance', {}, token);
+}
+
+export function getReports(token: string) {
+  return request<ReportsResponse>('/api/reports', {}, token);
+}
+
+export function getNotifications(token: string) {
+  return request<NotificationItem[]>('/api/notifications', {}, token);
+}
+
+const AI_TIMEOUT = 60_000;
+
+export function askAi(token: string, message: string, projectId?: number) {
+  return request<AiChatResponse>(
+    '/api/ai/ask',
+    { method: 'POST', body: JSON.stringify({ message, projectId: projectId ?? null }) },
+    token,
+    AI_TIMEOUT,
+  );
+}
+
+export function getAiInsights(token: string) {
+  return request<AiInsightsResponse>('/api/ai/insights', {}, token, AI_TIMEOUT);
+}
+
+export function decomposeTasks(token: string, goal: string, projectId?: number) {
+  return request<AiChatResponse>(
+    '/api/ai/tasks/decompose',
+    { method: 'POST', body: JSON.stringify({ goal, projectId: projectId ?? null }) },
+    token,
+    AI_TIMEOUT,
+  );
+}
+
+export function analyzeProjectRisk(token: string, projectId: number) {
+  return request<AiChatResponse>(`/api/ai/project/${projectId}/risk`, {}, token, AI_TIMEOUT);
+}
+
+export function simulateProject(
+  token: string,
+  description: string,
+  budget: number | null,
+  duration: string,
+  teamSize: number,
+) {
+  return request<ProjectSimulationResponse>(
+    '/api/ai/project/simulate',
+    { method: 'POST', body: JSON.stringify({ description, budget, duration, teamSize }) },
+    token,
+    AI_TIMEOUT,
+  );
+}
+
+export function updateProfile(token: string, input: UpdateProfileInput) {
+  return request<AuthResponse>(
+    '/api/auth/me',
+    {
+      method: 'PUT',
+      body: JSON.stringify(input),
     },
     token,
   );

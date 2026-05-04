@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import TaskDetailPanel from '../TaskDetailPanel';
 import TaskModal, { type TaskData } from '../TaskModal';
+import AiDecomposeModal from '../AiDecomposeModal';
 import { createTask, deleteTask, getTasks, getUsers, getProjects, updateTask } from '../../lib/api';
 import { SkeletonTable } from '../Skeleton';
 import type { AppRole, Task, UserSummary, Project } from '../../lib/types';
@@ -112,10 +113,15 @@ export default function Taches({ token, role }: TachesProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showDecomposeModal, setShowDecomposeModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const draggingTaskRef = useRef<Task | null>(null);
+  const dragOverColRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -210,6 +216,28 @@ export default function Taches({ token, role }: TachesProps) {
     setTasks((current) => [createdTask, ...current]);
   };
 
+  const handleAddDecomposedTasks = async (titles: string[], projectId: number) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return;
+    const created = await Promise.all(
+      titles.map((title) =>
+        createTask(token, {
+          title,
+          description: '',
+          status: 'TODO',
+          priority: 'MEDIUM',
+          startDate: null,
+          dueDate: null,
+          estimatedHours: null,
+          actualHours: null,
+          projectId,
+          assigneeId: null,
+        }),
+      ),
+    );
+    setTasks((current) => [...created, ...current]);
+  };
+
   const handleUpdateTask = async (taskData: TaskData) => {
     if (!editingTask) {
       return;
@@ -257,6 +285,55 @@ export default function Taches({ token, role }: TachesProps) {
     setSelectedTask((current) => (current?.id === taskId ? null : current));
   };
 
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    draggingTaskRef.current = task;
+    e.dataTransfer.effectAllowed = 'move';
+    // Defer the visual state change so React doesn't re-render and kill the drag source
+    setTimeout(() => setDraggingId(task.id), 0);
+  };
+
+  const handleDragEnd = () => {
+    draggingTaskRef.current = null;
+    setDraggingId(null);
+    setDragOverCol(null);
+    dragOverColRef.current = null;
+  };
+
+  const handleDragEnter = (e: React.DragEvent, status: string) => {
+    e.preventDefault();
+    if (dragOverColRef.current !== status) {
+      dragOverColRef.current = status;
+      setDragOverCol(status);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, newStatus: string) => {
+    e.preventDefault();
+    const task = draggingTaskRef.current;
+    if (!task || task.status === newStatus) { handleDragEnd(); return; }
+
+    // Optimistic update
+    setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: newStatus } : t));
+    handleDragEnd();
+
+    try {
+      await updateTask(token, task.id, {
+        title: task.title,
+        description: task.description,
+        status: newStatus,
+        priority: task.priority,
+        startDate: task.startDate,
+        dueDate: task.dueDate,
+        estimatedHours: task.estimatedHours,
+        actualHours: task.actualHours,
+        projectId: task.projectId!,
+        assigneeId: task.assigneeId,
+      });
+    } catch {
+      setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: task.status } : t));
+    }
+  };
+
   const groupedTasks = {
     TODO: tasks.filter((task) => task.status === 'TODO'),
     IN_PROGRESS: tasks.filter((task) => task.status === 'IN_PROGRESS'),
@@ -278,6 +355,14 @@ export default function Taches({ token, role }: TachesProps) {
 
   return (
     <div>
+      {showDecomposeModal && (
+        <AiDecomposeModal
+          token={token}
+          projects={projects}
+          onClose={() => setShowDecomposeModal(false)}
+          onAddTasks={handleAddDecomposedTasks}
+        />
+      )}
       {showTaskModal ? (
         <TaskModal
           onClose={() => setShowTaskModal(false)}
@@ -381,6 +466,14 @@ export default function Taches({ token, role }: TachesProps) {
         </div>
 
         <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => setShowDecomposeModal(true)}
+          disabled={role === 'employee'}
+          title="Décomposer un objectif avec l'IA"
+        >
+          ✦ IA
+        </button>
+        <button
           className="btn btn-primary btn-sm"
           onClick={() => setShowTaskModal(true)}
           disabled={role === 'employee'}
@@ -391,72 +484,67 @@ export default function Taches({ token, role }: TachesProps) {
 
       {viewMode === 'Kanban' ? (
         <div className="kanban-grid">
-          {Object.entries(groupedTasks).map(([status, columnTasks]) => (
-            <div key={status} className="kb-col">
-              <div className="kb-header">
-                <div className="kb-dot" style={{ background: status === 'DONE' ? 'var(--accent)' : status === 'IN_PROGRESS' ? 'var(--accent2)' : status === 'BLOCKED' ? 'var(--accent3)' : 'var(--text-muted)' }}></div>
-                <div className="kb-title">{status.replace('_', ' ')}</div>
-                <div className="kb-count">{columnTasks.length}</div>
-              </div>
-              {columnTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="task-card"
-                  onClick={() => setSelectedTask(task)}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                    <span className="task-tag tt-dev">{task.projectName ?? 'Task'}</span>
-                    <span className={`pri-badge ${getPriorityBadge(task.priority)}`}>{task.priority}</span>
-                  </div>
-                  <div className="task-title">{task.title}</div>
-                  <div className="pbar-wrap" style={{ marginBottom: '8px' }}>
-                    <div className="pbar">
-                      <div className="pfill" style={{ width: `${estimateProgress(task)}%` }}></div>
-                    </div>
-                    <span className="ppct" style={{ fontSize: '10px' }}>
-                      {estimateProgress(task)}%
-                    </span>
-                  </div>
-                  <div className="task-footer">
-                    <span className="task-due">{formatDueDate(task.dueDate)}</span>
-                    <div
-                      className="av"
-                      style={{
-                        width: '22px',
-                        height: '22px',
-                        fontSize: '9px',
-                        background: 'linear-gradient(135deg,#43e97b,#38f9d7)',
-                      }}
-                    >
-                      {getAssigneeInitials(task.assigneeEmail)}
-                    </div>
-                  </div>
-                  {role !== 'employee' ? (
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
-                      <button
-                        className="action-btn"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setEditingTask(task);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="action-btn action-btn-danger"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleDeleteTask(task.id);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ) : null}
+          {Object.entries(groupedTasks).map(([status, columnTasks]) => {
+            const isDragOver = dragOverCol === status;
+            const colColor = status === 'DONE' ? 'var(--accent)' : status === 'IN_PROGRESS' ? 'var(--accent2)' : status === 'BLOCKED' ? 'var(--accent3)' : 'var(--text-muted)';
+            return (
+              <div
+                key={status}
+                className={`kb-col${isDragOver ? ' drag-over' : ''}`}
+                onDragEnter={(e) => handleDragEnter(e, status)}
+                onDragOver={(e) => e.preventDefault()}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) { setDragOverCol(null); dragOverColRef.current = null; } }}
+                onDrop={(e) => void handleDrop(e, status)}
+              >
+                <div className="kb-header">
+                  <div className="kb-dot" style={{ background: colColor }} />
+                  <div className="kb-title">{status.replace('_', ' ')}</div>
+                  <div className="kb-count">{columnTasks.length}</div>
                 </div>
-              ))}
-            </div>
-          ))}
+
+                {columnTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className={`task-card${draggingId === task.id ? ' dragging' : ''}`}
+                    draggable={role !== 'employee'}
+                    onDragStart={(e) => handleDragStart(e, task)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => e.preventDefault()}
+                    onClick={() => draggingTaskRef.current === null && setSelectedTask(task)}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                      <span className="task-tag tt-dev">{task.projectName ?? 'Task'}</span>
+                      <span className={`pri-badge ${getPriorityBadge(task.priority)}`}>{task.priority}</span>
+                    </div>
+                    <div className="task-title">{task.title}</div>
+                    <div className="pbar-wrap" style={{ marginBottom: '8px' }}>
+                      <div className="pbar">
+                        <div className="pfill" style={{ width: `${estimateProgress(task)}%` }} />
+                      </div>
+                      <span className="ppct" style={{ fontSize: '10px' }}>{estimateProgress(task)}%</span>
+                    </div>
+                    <div className="task-footer">
+                      <span className="task-due">{formatDueDate(task.dueDate)}</span>
+                      <div className="av" style={{ width: '22px', height: '22px', fontSize: '9px', background: 'linear-gradient(135deg,#43e97b,#38f9d7)' }}>
+                        {getAssigneeInitials(task.assigneeEmail)}
+                      </div>
+                    </div>
+                    {role !== 'employee' && (
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); setEditingTask(task); }}>Edit</button>
+                        <button className="action-btn action-btn-danger" onClick={(e) => { e.stopPropagation(); void handleDeleteTask(task.id); }}>Delete</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Drop placeholder shown when dragging over this column */}
+                {isDragOver && draggingId !== null && (
+                  <div className="kb-drop-placeholder">drop here</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="card">

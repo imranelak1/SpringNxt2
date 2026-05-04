@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ProjectModal, { type ProjectData } from '../ProjectModal';
-import { createProject, deleteProject, getProjects, updateProject } from '../../lib/api';
+import { createProject, deleteProject, getProjects, updateProject, analyzeProjectRisk } from '../../lib/api';
 import { SkeletonTable } from '../Skeleton';
 import type { AppRole, Project } from '../../lib/types';
 
 interface ProjetsProps {
   token: string;
   role: AppRole;
+  isActive?: boolean;
 }
 
 const filters = [
@@ -43,13 +44,32 @@ function getStatusClass(status: string) {
   return 'b-gray';
 }
 
-export default function Projets({ token, role }: ProjetsProps) {
+export default function Projets({ token, role, isActive }: ProjetsProps) {
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const wasActive = useRef(false);
+
+  useEffect(() => {
+    if (isActive && !wasActive.current) setRefreshKey((k) => k + 1);
+    wasActive.current = isActive ?? false;
+  }, [isActive]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [riskPanel, setRiskPanel] = useState<{ projectId: number; content: string; loading: boolean } | null>(null);
+
+  const handleAnalyzeRisk = (projectId: number) => {
+    if (riskPanel?.projectId === projectId && !riskPanel.loading) {
+      setRiskPanel(null);
+      return;
+    }
+    setRiskPanel({ projectId, content: '', loading: true });
+    analyzeProjectRisk(token, projectId)
+      .then((res) => setRiskPanel({ projectId, content: res.content, loading: false }))
+      .catch(() => setRiskPanel({ projectId, content: 'Analyse indisponible. Vérifiez votre clé GROQ_API_KEY.', loading: false }));
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -80,7 +100,7 @@ export default function Projets({ token, role }: ProjetsProps) {
     return () => {
       isMounted = false;
     };
-  }, [selectedStatus, token]);
+  }, [selectedStatus, token, refreshKey]);
 
   if (role === 'employee') {
     return <div className="card"><div className="card-body">Projects are limited to admin and manager roles.</div></div>;
@@ -107,6 +127,7 @@ export default function Projets({ token, role }: ProjetsProps) {
       startDate: project.startDate || null,
       endDate: project.endDate || null,
       budget: project.budget ? Number(project.budget) : null,
+      spentAmount: project.spentAmount ? Number(project.spentAmount) : null,
       progressPercentage: 0,
     });
 
@@ -138,6 +159,7 @@ export default function Projets({ token, role }: ProjetsProps) {
       startDate: projectData.startDate || null,
       endDate: projectData.endDate || null,
       budget: projectData.budget ? Number(projectData.budget) : null,
+      spentAmount: projectData.spentAmount ? Number(projectData.spentAmount) : null,
       progressPercentage: editingProject.progressPercentage ?? 0,
     });
 
@@ -179,6 +201,7 @@ export default function Projets({ token, role }: ProjetsProps) {
             startDate: editingProject.startDate ?? '',
             endDate: editingProject.endDate ?? '',
             budget: editingProject.budget?.toString() ?? '',
+            spentAmount: editingProject.spentAmount?.toString() ?? '',
             status:
               editingProject.status === 'ACTIVE'
                 ? 'active'
@@ -272,17 +295,30 @@ export default function Projets({ token, role }: ProjetsProps) {
                 Members: <span style={{ color: 'var(--accent4)' }}>{project.memberCount}</span>
               </div>
             </div>
-            <div style={{ padding: '0 18px 16px', display: 'flex', gap: '8px' }}>
-              <button className="action-btn" onClick={() => setEditingProject(project)}>
-                Edit
-              </button>
+            <div style={{ padding: '0 18px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button className="action-btn" onClick={() => setEditingProject(project)}>Edit</button>
+              <button className="action-btn action-btn-danger" onClick={() => void handleDeleteProject(project.id)}>Delete</button>
               <button
-                className="action-btn action-btn-danger"
-                onClick={() => void handleDeleteProject(project.id)}
+                className="action-btn"
+                style={{ marginLeft: 'auto', color: 'var(--accent)', borderColor: 'var(--accent)', fontSize: '11px' }}
+                onClick={() => handleAnalyzeRisk(project.id)}
               >
-                Delete
+                {riskPanel?.projectId === project.id && riskPanel.loading ? '…' : '✦ Risque IA'}
               </button>
             </div>
+            {riskPanel?.projectId === project.id && !riskPanel.loading && riskPanel.content && (
+              <div style={{
+                margin: '0 18px 16px', padding: '12px 14px', borderRadius: '8px',
+                background: 'rgba(61,138,255,0.06)', border: '1px solid rgba(61,138,255,0.2)',
+                fontSize: '12px', color: 'var(--text-dim)', lineHeight: 1.65, whiteSpace: 'pre-wrap',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <span className="ai-badge" style={{ fontSize: '10px' }}>✦ IA</span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)' }}>Analyse de risque</span>
+                </div>
+                {riskPanel.content}
+              </div>
+            )}
           </div>
         ))}
       </div>

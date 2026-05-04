@@ -17,6 +17,8 @@ import Parametres from './components/views/Parametres';
 import Utilisateurs from './components/views/Utilisateurs';
 import PdfImport from './components/views/PdfImport';
 import GanttView from './components/views/GanttView';
+import Simulation from './components/views/Simulation';
+import ChatWidget from './components/ChatWidget';
 import type { AuthSession, View } from './lib/types';
 
 const SESSION_STORAGE_KEY = 'springnxt-session';
@@ -89,18 +91,19 @@ export default function Home() {
     dashboard: (
       <Dashboard onNavigate={setActiveView} token={session.token} role={session.role} />
     ),
-    projets: <Projets token={session.token} role={session.role} />,
+    projets: <Projets token={session.token} role={session.role} isActive={activeView === 'projets'} />,
     taches: <Taches token={session.token} role={session.role} />,
     calendrier: <Calendrier token={session.token} role={session.role} />,
     ressources: <Ressources token={session.token} role={session.role} />,
-    rapports: <Rapports />,
-    budgets: <Budgets />,
-    performance: <Performance />,
-    notifications: <Notifications />,
-    parametres: <Parametres email={session.email} role={session.role} firstName={session.firstName ?? ''} lastName={session.lastName ?? ''} />,
+    rapports: <Rapports token={session.token} />,
+    budgets: <Budgets token={session.token} />,
+    performance: <Performance token={session.token} />,
+    notifications: <Notifications token={session.token} />,
+    parametres: <Parametres token={session.token} email={session.email} role={session.role} firstName={session.firstName ?? ''} lastName={session.lastName ?? ''} onProfileUpdated={(firstName, lastName) => { window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ ...session, firstName, lastName })); setSessionOverride({ ...session, firstName, lastName }); }} />,
     utilisateurs: <Utilisateurs token={session.token} />,
     'import-pdf': <PdfImport token={session.token} />,
     gantt: <GanttView token={session.token} role={session.role} />,
+    simulation: <Simulation token={session.token} onNavigate={setActiveView} />,
   };
 
   return (
@@ -114,6 +117,7 @@ export default function Home() {
         firstName={session.firstName ?? ''}
         lastName={session.lastName ?? ''}
       />
+      <ChatWidget token={session.token} />
       <main className="main">
         <Topbar
           activeView={activeView}

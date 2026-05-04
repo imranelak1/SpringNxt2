@@ -62,4 +62,11 @@ public class AuthController {
                 .lastName(user.getLastName())
                 .build());
     }
+
+    @PutMapping("/me")
+    public ResponseEntity<AuthResponse> updateProfile(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(authService.updateProfile(userDetails.getUsername(), request));
+    }
 }

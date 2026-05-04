@@ -1,31 +1,22 @@
 'use client';
+
 import { useState } from 'react';
+import { updateProfile } from '../../lib/api';
 import type { AppRole } from '../../lib/types';
 
 interface ParametresProps {
+  token: string;
   email: string;
   role: AppRole;
   firstName: string;
   lastName: string;
+  onProfileUpdated: (firstName: string, lastName: string) => void;
 }
 
-function getInitials(email: string) {
-  return email
-    .split('@')[0]
-    .split(/[.\-_]/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
-function getDisplayName(email: string) {
-  return email
-    .split('@')[0]
-    .split(/[.\-_]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+function getInitials(firstName: string, lastName: string, email: string) {
+  if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  return email.split('@')[0].split(/[.\-_]/).filter(Boolean).slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '').join('');
 }
 
 const roleLabel: Record<AppRole, string> = {
@@ -40,19 +31,56 @@ const roleBadge: Record<AppRole, string> = {
   employee: 'b-blue',
 };
 
-export default function Parametres({ email, role, firstName, lastName }: ParametresProps) {
-  const displayName = firstName && lastName ? `${firstName} ${lastName}` : getDisplayName(email);
-  const initials = firstName && lastName
-    ? `${firstName[0]}${lastName[0]}`.toUpperCase()
-    : getInitials(email);
+export default function Parametres({ token, email, role, firstName, lastName, onProfileUpdated }: ParametresProps) {
+  const [firstNameValue, setFirstNameValue] = useState(firstName);
+  const [lastNameValue, setLastNameValue] = useState(lastName);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [saveError, setSaveError] = useState('');
 
   const [prefs, setPrefs] = useState({ darkMode: true, iaResume: true, previsions: true, alertes: true, temps: false });
   const [integrations, setIntegrations] = useState({ slack: true, drive: true, github: true, stripe: false, notion: false });
-  const [nameValue, setNameValue] = useState(displayName);
-  const [emailValue, setEmailValue] = useState(email);
 
   const togglePref = (key: keyof typeof prefs) => setPrefs((p) => ({ ...p, [key]: !p[key] }));
   const toggleInt = (key: keyof typeof integrations) => setIntegrations((i) => ({ ...i, [key]: !i[key] }));
+
+  const displayName = firstNameValue && lastNameValue
+    ? `${firstNameValue} ${lastNameValue}`
+    : email.split('@')[0];
+  const initials = getInitials(firstNameValue, lastNameValue, email);
+
+  const handleSave = async () => {
+    const fn = firstNameValue.trim();
+    const ln = lastNameValue.trim();
+    if (!fn || !ln) {
+      setSaveStatus('error');
+      setSaveError('Le prénom et le nom sont requis.');
+      return;
+    }
+
+    setSaving(true);
+    setSaveStatus('idle');
+    setSaveError('');
+
+    try {
+      const updated = await updateProfile(token, { firstName: fn, lastName: ln });
+      onProfileUpdated(updated.firstName ?? fn, updated.lastName ?? ln);
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (err) {
+      setSaveStatus('error');
+      setSaveError(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setFirstNameValue(firstName);
+    setLastNameValue(lastName);
+    setSaveStatus('idle');
+    setSaveError('');
+  };
 
   return (
     <div>
@@ -66,7 +94,6 @@ export default function Parametres({ email, role, firstName, lastName }: Paramet
           <div className="card">
             <div className="card-header">
               <div className="card-title">Profil utilisateur</div>
-              <button className="btn btn-ghost btn-sm">Modifier</button>
             </div>
             <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border)' }}>
               <div className="av" style={{ width: '56px', height: '56px', fontSize: '18px', background: 'linear-gradient(135deg,#667eea,#764ba2)' }}>
@@ -80,20 +107,28 @@ export default function Parametres({ email, role, firstName, lastName }: Paramet
             </div>
             <div style={{ padding: '4px 0' }}>
               <div className="settings-row">
-                <div className="settings-info"><div className="settings-label">Nom complet</div></div>
-                <input className="settings-input" value={nameValue} onChange={(e) => setNameValue(e.target.value)} />
+                <div className="settings-info"><div className="settings-label">Prénom</div></div>
+                <input
+                  className="settings-input"
+                  value={firstNameValue}
+                  onChange={(e) => { setFirstNameValue(e.target.value); setSaveStatus('idle'); }}
+                />
+              </div>
+              <div className="settings-row">
+                <div className="settings-info"><div className="settings-label">Nom</div></div>
+                <input
+                  className="settings-input"
+                  value={lastNameValue}
+                  onChange={(e) => { setLastNameValue(e.target.value); setSaveStatus('idle'); }}
+                />
               </div>
               <div className="settings-row">
                 <div className="settings-info"><div className="settings-label">Email</div></div>
-                <input className="settings-input" value={emailValue} onChange={(e) => setEmailValue(e.target.value)} />
+                <input className="settings-input" value={email} readOnly style={{ opacity: 0.6, cursor: 'not-allowed' }} />
               </div>
               <div className="settings-row">
-                <div className="settings-info"><div className="settings-label">Fuseau horaire</div></div>
-                <input className="settings-input" defaultValue="UTC+1 · Casablanca" />
-              </div>
-              <div className="settings-row">
-                <div className="settings-info"><div className="settings-label">Langue</div></div>
-                <input className="settings-input" defaultValue="Français (FR)" />
+                <div className="settings-info"><div className="settings-label">Rôle</div></div>
+                <input className="settings-input" value={roleLabel[role]} readOnly style={{ opacity: 0.6, cursor: 'not-allowed' }} />
               </div>
             </div>
           </div>
@@ -101,7 +136,6 @@ export default function Parametres({ email, role, firstName, lastName }: Paramet
           <div className="card">
             <div className="card-header">
               <div className="card-title">Membres de l'équipe</div>
-              <button className="btn btn-primary btn-sm">＋ Inviter</button>
             </div>
             <div className="res-row">
               <div className="av" style={{ background: 'linear-gradient(135deg,#667eea,#764ba2)' }}>{initials}</div>
@@ -121,19 +155,19 @@ export default function Parametres({ email, role, firstName, lastName }: Paramet
           <div className="card">
             <div className="card-header"><div className="card-title">Préférences</div></div>
             <div style={{ padding: '4px 0' }}>
-              {[
-                { key: 'darkMode' as const, label: 'Mode sombre', desc: 'Thème actuellement appliqué' },
-                { key: 'iaResume' as const, label: 'Résumé IA quotidien', desc: 'Insights automatiques chaque matin' },
-                { key: 'previsions' as const, label: 'Prévisions intelligentes', desc: 'Prédictions délais et budgets' },
-                { key: 'alertes' as const, label: 'Alertes automatiques', desc: 'Délais, surcharges, budgets' },
-                { key: 'temps' as const, label: 'Suivi du temps', desc: 'Enregistrer les heures par tâche' },
-              ].map(({ key, label, desc }) => (
+              {([
+                { key: 'darkMode' as const,    label: 'Mode sombre',             desc: 'Thème actuellement appliqué' },
+                { key: 'iaResume' as const,    label: 'Résumé IA quotidien',     desc: 'Insights automatiques chaque matin' },
+                { key: 'previsions' as const,  label: 'Prévisions intelligentes', desc: 'Prédictions délais et budgets' },
+                { key: 'alertes' as const,     label: 'Alertes automatiques',    desc: 'Délais, surcharges, budgets' },
+                { key: 'temps' as const,       label: 'Suivi du temps',          desc: 'Enregistrer les heures par tâche' },
+              ] as const).map(({ key, label, desc }) => (
                 <div key={key} className="settings-row">
                   <div className="settings-info">
                     <div className="settings-label">{label}</div>
                     <div className="settings-desc">{desc}</div>
                   </div>
-                  <div className={`toggle ${prefs[key] ? 'on' : ''}`} onClick={() => togglePref(key)}></div>
+                  <div className={`toggle ${prefs[key] ? 'on' : ''}`} onClick={() => togglePref(key)} />
                 </div>
               ))}
             </div>
@@ -142,27 +176,40 @@ export default function Parametres({ email, role, firstName, lastName }: Paramet
           <div className="card">
             <div className="card-header"><div className="card-title">Intégrations</div></div>
             <div style={{ padding: '4px 0' }}>
-              {[
-                { key: 'slack' as const, label: 'Slack', desc: 'Notifications dans vos canaux' },
-                { key: 'drive' as const, label: 'Google Drive', desc: 'Pièces jointes et livrables' },
-                { key: 'github' as const, label: 'GitHub', desc: 'Lier commits aux tâches dev' },
-                { key: 'stripe' as const, label: 'Stripe', desc: 'Suivi paiements clients' },
-                { key: 'notion' as const, label: 'Notion', desc: 'Synchroniser documentation' },
-              ].map(({ key, label, desc }) => (
+              {([
+                { key: 'slack' as const,   label: 'Slack',        desc: 'Notifications dans vos canaux' },
+                { key: 'drive' as const,   label: 'Google Drive', desc: 'Pièces jointes et livrables' },
+                { key: 'github' as const,  label: 'GitHub',       desc: 'Lier commits aux tâches dev' },
+                { key: 'stripe' as const,  label: 'Stripe',       desc: 'Suivi paiements clients' },
+                { key: 'notion' as const,  label: 'Notion',       desc: 'Synchroniser documentation' },
+              ] as const).map(({ key, label, desc }) => (
                 <div key={key} className="settings-row">
                   <div className="settings-info">
                     <div className="settings-label">{label}</div>
                     <div className="settings-desc">{desc}</div>
                   </div>
-                  <div className={`toggle ${integrations[key] ? 'on' : ''}`} onClick={() => toggleInt(key)}></div>
+                  <div className={`toggle ${integrations[key] ? 'on' : ''}`} onClick={() => toggleInt(key)} />
                 </div>
               ))}
             </div>
           </div>
 
+          {saveStatus === 'success' && (
+            <div style={{ fontSize: '13px', color: 'var(--accent)', background: 'rgba(79,255,176,0.08)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(79,255,176,0.2)' }}>
+              ✓ Profil mis à jour avec succès.
+            </div>
+          )}
+          {saveStatus === 'error' && (
+            <div style={{ fontSize: '13px', color: 'var(--accent3)', background: 'rgba(255,107,107,0.08)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,107,107,0.2)' }}>
+              {saveError}
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="btn btn-primary" style={{ flex: 1 }}>Enregistrer les modifications</button>
-            <button className="btn btn-ghost">Annuler</button>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => void handleSave()} disabled={saving}>
+              {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+            </button>
+            <button className="btn btn-ghost" onClick={handleCancel} disabled={saving}>Annuler</button>
           </div>
         </div>
       </div>

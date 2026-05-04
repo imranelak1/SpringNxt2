@@ -39,6 +39,7 @@ public class ProjectService {
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .budget(request.getBudget())
+                .spentAmount(request.getSpentAmount())
                 .progressPercentage(request.getProgressPercentage())
                 .build();
 
@@ -108,6 +109,7 @@ public class ProjectService {
         project.setStartDate(request.getStartDate());
         project.setEndDate(request.getEndDate());
         project.setBudget(request.getBudget());
+        project.setSpentAmount(request.getSpentAmount());
         project.setProgressPercentage(
                 request.getProgressPercentage() != null ? request.getProgressPercentage() : project.getProgressPercentage());
 
@@ -156,6 +158,7 @@ public class ProjectService {
                 .startDate(project.getStartDate())
                 .endDate(project.getEndDate())
                 .budget(project.getBudget())
+                .spentAmount(project.getSpentAmount())
                 .progressPercentage(project.getProgressPercentage())
                 .createdAt(project.getCreatedAt())
                 .taskCount(project.getTasks() != null ? project.getTasks().size() : 0)

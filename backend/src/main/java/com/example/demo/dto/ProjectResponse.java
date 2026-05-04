@@ -21,6 +21,7 @@ public class ProjectResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private BigDecimal budget;
+    private BigDecimal spentAmount;
     private Integer progressPercentage;
     private LocalDateTime createdAt;
     private int taskCount;

@@ -22,9 +22,11 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        upsert("Admin",   "Nexus",   "admin@springnxt.local",    Role.ADMIN);
-        upsert("Project", "Manager", "manager@springnxt.local",  Role.MANAGER);
-        upsert("Team",    "Member",  "employee1@springnxt.local", Role.EMPLOYEE);
+        upsert("Admin",   "Nexus",    "admin@springnxt.local",     Role.ADMIN);
+        upsert("Project", "Manager", "manager@springnxt.local",   Role.MANAGER);
+        upsert("Youssef", "El Amrani","employee1@springnxt.local", Role.EMPLOYEE);
+        upsert("Karim",   "Alami",   "developer@springnxt.local", Role.EMPLOYEE);
+        upsert("Sofia",   "Benali",  "designer@springnxt.local",  Role.EMPLOYEE);
     }
 
     private void upsert(String firstName, String lastName, String email, Role role) {

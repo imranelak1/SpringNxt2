@@ -34,4 +34,6 @@ public class ProjectRequest {
     @Min(value = 0, message = "Progress percentage must be at least 0")
     @Max(value = 100, message = "Progress percentage must be at most 100")
     private Integer progressPercentage;
+
+    private String githubRepo;
 }

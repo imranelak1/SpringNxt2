@@ -39,6 +39,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/github/webhook",
                                 "/api/test-email",
                                 "/api/test-email/**",
                                 "/api/health/**",
@@ -49,6 +50,7 @@ public class SecurityConfig {
                                 "/login/oauth2/**",
                                 "/h2-console/**")
                         .permitAll()
+                        .requestMatchers("/api/notifications/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/api/projects/**").hasAnyRole("ADMIN", "MANAGER")

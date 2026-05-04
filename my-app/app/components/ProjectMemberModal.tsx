@@ -41,17 +41,27 @@ export default function ProjectMemberModal({
     setForm((current) => ({ ...current, [field]: value }));
 
   const handleSave = async () => {
+    const pct = Number(form.allocationPercentage);
+    if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+      setError('Allocation must be between 0 and 100.');
+      return;
+    }
+    if (!form.projectId) { setError('Please choose a project.'); return; }
+    if (!form.userId) { setError('Please choose a user.'); return; }
+
     setLoading(true);
     setError('');
 
     try {
       await onSave?.(form);
-      onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save assignment.');
-    } finally {
       setLoading(false);
+      return;
     }
+
+    setLoading(false);
+    onClose();
   };
 
   if (typeof document === 'undefined') return null;

@@ -32,12 +32,14 @@ export default function UserModal({ onClose, onSave, mode = 'create', initial }:
 
     try {
       await onSave?.({ name, email, role, password });
-      onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save user.');
-    } finally {
       setLoading(false);
+      return;
     }
+
+    setLoading(false);
+    onClose();
   };
 
   if (typeof document === 'undefined') return null;

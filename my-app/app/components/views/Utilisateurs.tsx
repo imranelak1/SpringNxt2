@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import UserModal, { type UserFormData } from '../UserModal';
 import { createUser, deleteUser, getUsers, updateUser } from '../../lib/api';
 import { SkeletonTable } from '../Skeleton';
-import type { UserSummary } from '../../lib/types';
+import type { AppRole, UserSummary } from '../../lib/types';
 
 interface UtilisateursProps {
   token: string;
+  role: AppRole;
 }
 
 const roleLabel: Record<string, string> = {
@@ -34,7 +35,7 @@ function formatDate(dateValue: string) {
   }).format(new Date(dateValue));
 }
 
-export default function Utilisateurs({ token }: UtilisateursProps) {
+export default function Utilisateurs({ token, role }: UtilisateursProps) {
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [filterRole, setFilterRole] = useState('ALL');
@@ -67,12 +68,17 @@ export default function Utilisateurs({ token }: UtilisateursProps) {
       }
     }
 
+    if (role === 'employee') {
+      setLoading(false);
+      return;
+    }
+
     void loadUsers();
 
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [role, token]);
 
   const filteredUsers = useMemo(
     () =>
@@ -135,6 +141,10 @@ export default function Utilisateurs({ token }: UtilisateursProps) {
     await deleteUser(token, userId);
     setUsers((current) => current.filter((user) => user.id !== userId));
   };
+
+  if (role === 'employee') {
+    return <div className="card"><div className="card-body">User management is limited to admin and manager roles.</div></div>;
+  }
 
   if (loading) {
     return <SkeletonTable rows={5} cols={5} />;

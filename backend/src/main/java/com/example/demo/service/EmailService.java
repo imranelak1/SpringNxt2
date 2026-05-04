@@ -115,6 +115,25 @@ public class EmailService {
         }
     }
 
+    @Async("emailTaskExecutor")
+    public void sendTaskCommentAddedEmail(String recipientEmail,
+                                          String recipientName,
+                                          String authorName,
+                                          String projectName,
+                                          String taskTitle,
+                                          String commentText) {
+        if (!notificationsEnabled) return;
+        String body = row("Project", projectName)
+                + row("Task", taskTitle)
+                + row("Comment from", authorName)
+                + row("Comment", commentText)
+                + cta("Open Nexus", frontendUrl);
+        send(recipientEmail,
+                "New comment on task: " + taskTitle,
+                buildHtml("Task comment added",
+                        "Hi " + recipientName + ", a new comment was added to a task you follow.", body));
+    }
+
     // ─── Internal helpers ──────────────────────────────────────────
 
     private void send(String to, String subject, String html) {

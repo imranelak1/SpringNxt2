@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface Toast {
@@ -38,9 +38,12 @@ interface ConfirmState extends ConfirmOptions {
 let nextId = 0;
 
 export function AlertProvider({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const timerRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => { setMounted(true); }, []);
 
   const dismiss = useCallback((id: number) => {
     clearTimeout(timerRef.current[id]);
@@ -75,7 +78,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     <AlertContext.Provider value={api}>
       {children}
 
-      {typeof document !== 'undefined' &&
+      {mounted &&
         createPortal(
           <>
             {/* Toasts */}

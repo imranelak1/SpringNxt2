@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ProjectModal, { type ProjectData } from '../ProjectModal';
+import ProjectWorkspace from './ProjectWorkspace';
 import { createProject, deleteProject, getProjects, updateProject, analyzeProjectRisk } from '../../lib/api';
 import { SkeletonTable } from '../Skeleton';
 import { useAlert } from '../AlertProvider';
@@ -60,6 +61,7 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [openProject, setOpenProject] = useState<Project | null>(null);
   const [riskPanel, setRiskPanel] = useState<{ projectId: number; content: string; loading: boolean } | null>(null);
 
   const handleAnalyzeRisk = (projectId: number) => {
@@ -209,6 +211,21 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
     );
   }
 
+  if (openProject) {
+    return (
+      <ProjectWorkspace
+        project={openProject}
+        token={token}
+        role={role}
+        onBack={() => setOpenProject(null)}
+        onEdit={() => {
+          setEditingProject(openProject);
+          setOpenProject(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div>
       {showModal ? (
@@ -269,7 +286,7 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
 
       <div className="grid-3 mb18">
         {projects.map((project) => (
-          <div key={project.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }}>
+          <div key={project.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => setOpenProject(project)}>
             <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <div
@@ -319,8 +336,8 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
               </div>
             </div>
             <div style={{ padding: '0 18px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button className="action-btn" onClick={() => setEditingProject(project)}>Edit</button>
-              <button className="action-btn action-btn-danger" onClick={() => void handleDeleteProject(project.id)}>Delete</button>
+              <button className="action-btn" onClick={(e) => { e.stopPropagation(); setEditingProject(project); }}>Edit</button>
+              <button className="action-btn action-btn-danger" onClick={(e) => { e.stopPropagation(); void handleDeleteProject(project.id); }}>Delete</button>
               <button
                 className="action-btn"
                 style={{ marginLeft: 'auto', color: 'var(--accent)', borderColor: 'var(--accent)', fontSize: '11px' }}

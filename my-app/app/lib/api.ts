@@ -148,21 +148,17 @@ export function getProjects(token: string, search?: string, status?: string) {
   return request<PagedResponse<Project>>(`/api/projects?${params.toString()}`, {}, token);
 }
 
-export function getTasks(token: string, status?: string, priority?: string) {
+export function getTasks(token: string, status?: string, priority?: string, projectId?: number) {
   const params = new URLSearchParams({
     page: '0',
-    size: '30',
+    size: '100',
     sortBy: 'dueDate',
     sortDir: 'asc',
   });
 
-  if (status && status !== 'ALL') {
-    params.set('status', status);
-  }
-
-  if (priority && priority !== 'ALL') {
-    params.set('priority', priority);
-  }
+  if (status && status !== 'ALL') params.set('status', status);
+  if (priority && priority !== 'ALL') params.set('priority', priority);
+  if (projectId !== undefined) params.set('projectId', String(projectId));
 
   return request<PagedResponse<Task>>(`/api/tasks?${params.toString()}`, {}, token);
 }

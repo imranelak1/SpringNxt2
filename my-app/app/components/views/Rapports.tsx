@@ -5,6 +5,105 @@ import { getReports, askAi } from '../../lib/api';
 import { useTypewriter } from '../../lib/useTypewriter';
 import type { ReportsResponse } from '../../lib/types';
 
+async function exportPdf(data: ReportsResponse, aiText: string) {
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210;
+  const margin = 18;
+  const col = W - margin * 2;
+  let y = 20;
+
+  const line = (text: string, size: number, color: [number, number, number], bold = false) => {
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.text(text, margin, y);
+    y += size * 0.45 + 2;
+  };
+
+  const rule = (r = 200, g = 200, b = 200) => {
+    doc.setDrawColor(r, g, b);
+    doc.line(margin, y, W - margin, y);
+    y += 5;
+  };
+
+  // Header
+  doc.setFillColor(15, 17, 26);
+  doc.rect(0, 0, W, 36, 'F');
+  doc.setFontSize(18);
+  doc.setTextColor(79, 255, 176);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SpringNxt — Rapport Portfolio', margin, 16);
+  doc.setFontSize(9);
+  doc.setTextColor(160, 165, 190);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Généré le ${new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date())}`, margin, 26);
+  y = 46;
+
+  // KPIs
+  line('Synthèse globale', 13, [79, 255, 176], true);
+  y += 2;
+  const kpis = [
+    ['Total projets', String(data.totalProjects)],
+    ['Projets actifs', String(data.activeProjects)],
+    ['Projets livrés', String(data.completedProjects)],
+    ['Taux complétion tâches', `${data.deliveryRate}%`],
+    ['Score santé moyen', `${data.avgHealthScore}/100`],
+    ['Total tâches', String(data.totalTasks)],
+    ['Tâches terminées', String(data.completedTasks)],
+  ];
+  kpis.forEach(([label, val]) => {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 155, 180);
+    doc.text(label, margin, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(230, 232, 245);
+    doc.text(val, margin + 80, y);
+    y += 7;
+  });
+  y += 3;
+  rule();
+
+  // Status breakdown
+  line('Répartition par statut', 13, [79, 255, 176], true);
+  y += 2;
+  data.projectsByStatus.forEach(({ status, count }) => {
+    const pct = data.totalProjects === 0 ? 0 : Math.round((count / data.totalProjects) * 100);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 155, 180);
+    doc.text(status, margin, y);
+    doc.setFillColor(40, 44, 64);
+    doc.roundedRect(margin + 40, y - 4, col - 40, 5, 1, 1, 'F');
+    doc.setFillColor(61, 138, 255);
+    if (pct > 0) doc.roundedRect(margin + 40, y - 4, (col - 40) * pct / 100, 5, 1, 1, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(230, 232, 245);
+    doc.text(`${count}`, W - margin, y, { align: 'right' });
+    y += 8;
+  });
+  y += 3;
+  rule();
+
+  // AI analysis
+  if (aiText) {
+    line('Analyse IA', 13, [79, 255, 176], true);
+    y += 2;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(200, 205, 225);
+    const wrapped = doc.splitTextToSize(aiText, col);
+    wrapped.forEach((l: string) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.text(l, margin, y);
+      y += 6;
+    });
+  }
+
+  doc.save(`rapport-portfolio-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
 interface RapportsProps {
   token: string;
 }
@@ -51,6 +150,13 @@ export default function Rapports({ token }: RapportsProps) {
           <div className="section-title" style={{ margin: 0 }}>Rapports &amp; Analyses</div>
           <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Générés automatiquement à partir des données réelles</div>
         </div>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => void exportPdf(data, aiText)}
+          title="Exporter en PDF"
+        >
+          ↓ PDF
+        </button>
       </div>
 
       <div className="grid-lr">
@@ -148,6 +254,15 @@ export default function Rapports({ token }: RapportsProps) {
                   disabled={aiLoading}
                 >
                   {aiLoading ? '…' : 'Générer'}
+                </button>
+              )}
+              {aiLoaded && typingDone && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginLeft: 'auto', fontSize: '11px' }}
+                  onClick={() => void exportPdf(data, aiText)}
+                >
+                  ↓ Exporter PDF
                 </button>
               )}
             </div>

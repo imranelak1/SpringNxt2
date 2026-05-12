@@ -45,7 +45,6 @@ export default function Notifications({ token }: NotificationsProps) {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     getNotifications(token)
       .then((res) => {
         if (active) {

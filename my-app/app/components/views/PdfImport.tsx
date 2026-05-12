@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { analyzePdfImport, createProjectFromPdfImport } from '../../lib/api';
+import { archiveAiGeneration } from '../../lib/aiArchive';
 import type { PdfImportAnalysis, PdfImportEntity } from '../../lib/types';
 
 type Step = 'upload' | 'validate' | 'done';
@@ -28,6 +29,7 @@ export default function PdfImport({ token }: PdfImportProps) {
   const [step, setStep] = useState<Step>('upload');
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [parsing, setParsing] = useState(false);
   const [creating, setCreating] = useState(false);
   const [analysis, setAnalysis] = useState<PdfImportAnalysis | null>(null);
@@ -35,11 +37,14 @@ export default function PdfImport({ token }: PdfImportProps) {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [createdProject, setCreatedProject] = useState<{ name: string; taskCount: number } | null>(null);
+  const [generationArchived, setGenerationArchived] = useState(false);
 
   const handleAnalyzeFile = async (file: File) => {
     setFileName(file.name);
+    setSourceFile(file);
     setParsing(true);
     setError('');
+    setGenerationArchived(false);
 
     try {
       const response = await analyzePdfImport(token, file);
@@ -86,6 +91,21 @@ export default function PdfImport({ token }: PdfImportProps) {
     setError('');
 
     try {
+      archiveAiGeneration({
+        type: 'pdf-import',
+        title: projectName,
+        payload: {
+          fileName,
+          analysis,
+          entities,
+          projectName,
+          tasks,
+          startDate: dates[0]?.value || analysis?.startDate || null,
+          endDate: dates[1]?.value || analysis?.endDate || null,
+        },
+      });
+      setGenerationArchived(true);
+
       const result = await createProjectFromPdfImport(token, {
         projectName,
         description: analysis?.description ?? `Imported from PDF: ${fileName}`,
@@ -126,6 +146,8 @@ export default function PdfImport({ token }: PdfImportProps) {
                   setEntities([]);
                   setCreatedProject(null);
                   setFileName('');
+                  setSourceFile(null);
+                  setGenerationArchived(false);
                 }}
               >
                 Import another PDF
@@ -326,8 +348,15 @@ export default function PdfImport({ token }: PdfImportProps) {
             ) : null}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button className="btn btn-ghost" onClick={() => setStep('upload')}>Back</button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => sourceFile && void handleAnalyzeFile(sourceFile)}
+                disabled={creating || parsing || !sourceFile}
+              >
+                Regenerer
+              </button>
               <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => void handleConfirm()} disabled={creating}>
-                {creating ? 'Creating...' : 'Create project'}
+                {creating ? 'Creating...' : generationArchived ? 'Valide et archive' : 'Valider et creer'}
               </button>
             </div>
           </div>

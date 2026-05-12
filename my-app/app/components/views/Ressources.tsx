@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useAlert } from '../AlertProvider';
 import ProjectMemberModal, { type ProjectMemberFormData } from '../ProjectMemberModal';
 import {
   createProjectMember,
@@ -165,9 +166,30 @@ export default function Ressources({ token, role }: RessourcesProps) {
     setEditingMember(null);
   };
 
+  const alerts = useAlert();
+
   const handleDeleteMember = async (memberId: number) => {
-    await deleteProjectMember(token, memberId);
-    setMembers((current) => current.filter((member) => member.id !== memberId));
+    const member = members.find((item) => item.id === memberId);
+    const confirmed = await alerts.confirm({
+      title: 'Supprimer cette affectation ?',
+      message: member
+        ? `${member.firstName} ${member.lastName} sera retiré(e) du projet ${member.projectName}.`
+        : 'Cette action est définitive.',
+      confirmText: 'Supprimer',
+      tone: 'warning',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteProjectMember(token, memberId);
+      setMembers((current) => current.filter((item) => item.id !== memberId));
+      alerts.success('Affectation supprimée', member ? `${member.firstName} ${member.lastName} a été retiré(e).` : undefined);
+    } catch (deleteError) {
+      alerts.error('Suppression impossible', deleteError instanceof Error ? deleteError.message : 'Réessayez dans un instant.');
+    }
   };
 
   if (role === 'employee') {

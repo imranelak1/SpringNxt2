@@ -1,0 +1,6 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Tue Apr 14 07:30:44 PDT 2026
+@default-shibboleth-repo-https\://build.shibboleth.net/nexus/content/repositories/releases/.lastUpdated=1776177044249
+@default-central-https\://repo.maven.apache.org/maven2/.lastUpdated=1776177044083
+https\://build.shibboleth.net/nexus/content/repositories/releases/.error=Could not transfer artifact com.nimbusds\:content-type\:jar\:2.2 from/to shibboleth-repo (https\://build.shibboleth.net/nexus/content/repositories/releases/)\: build.shibboleth.net
+https\://repo.maven.apache.org/maven2/.error=Could not transfer artifact com.nimbusds\:content-type\:jar\:2.2 from/to central (https\://repo.maven.apache.org/maven2)\: repo.maven.apache.org

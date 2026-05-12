@@ -6,13 +6,17 @@ export function useTypewriter(text: string, speedMs = 6) {
 
   useEffect(() => {
     if (!text) {
+      const resetId = window.setTimeout(() => {
+        setDisplayed('');
+        setDone(false);
+      }, 0);
+      return () => window.clearTimeout(resetId);
+    }
+    let i = 0;
+    const resetId = window.setTimeout(() => {
       setDisplayed('');
       setDone(false);
-      return;
-    }
-    setDisplayed('');
-    setDone(false);
-    let i = 0;
+    }, 0);
     const id = setInterval(() => {
       i += 1;
       setDisplayed(text.slice(0, i));
@@ -21,7 +25,10 @@ export function useTypewriter(text: string, speedMs = 6) {
         setDone(true);
       }
     }, speedMs);
-    return () => clearInterval(id);
+    return () => {
+      window.clearTimeout(resetId);
+      clearInterval(id);
+    };
   }, [text, speedMs]);
 
   return { displayed, done };

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getBudget, askAi } from '../../lib/api';
+import { archiveAiGeneration } from '../../lib/aiArchive';
 import { useTypewriter } from '../../lib/useTypewriter';
 import type { BudgetProjectItem, BudgetResponse } from '../../lib/types';
 
@@ -33,11 +34,14 @@ export default function Budgets({ token }: BudgetsProps) {
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiLoaded, setAiLoaded] = useState(false);
+  const [aiValidated, setAiValidated] = useState(false);
   const { displayed: typedText, done: typingDone } = useTypewriter(aiLoaded ? aiText : '');
 
   const generateBudgetAnalysis = (budgetData: BudgetResponse) => {
     if (aiLoading) return;
     setAiLoading(true);
+    setAiLoaded(false);
+    setAiValidated(false);
     const overProjects = budgetData.projects.filter((p) => p.overBudget).map((p) => p.projectName).join(', ');
     const prompt = `Analyse le budget du portfolio. Budget total : ${budgetData.totalBudget} MAD, dépensé : ${budgetData.totalSpent} MAD, restant : ${budgetData.totalRemaining} MAD, ${budgetData.overBudgetCount} projet(s) en dépassement${overProjects ? ` (${overProjects})` : ''}. Génère 3 alertes ou recommandations concrètes en 2-3 lignes chacune. Sois direct et professionnel.`;
     askAi(token, prompt)
@@ -46,9 +50,17 @@ export default function Budgets({ token }: BudgetsProps) {
       .finally(() => setAiLoading(false));
   };
 
+  const validateBudgetAnalysis = () => {
+    archiveAiGeneration({
+      type: 'budget-analysis',
+      title: 'Analyse budgetaire IA',
+      payload: { content: aiText },
+    });
+    setAiValidated(true);
+  };
+
   useEffect(() => {
     let active = true;
-    setLoading(true);
     getBudget(token)
       .then((res) => { if (active) setData(res); })
       .catch((err) => { if (active) setError(err.message ?? 'Erreur'); })
@@ -178,6 +190,11 @@ export default function Budgets({ token }: BudgetsProps) {
                   {aiLoading ? '…' : 'Analyser'}
                 </button>
               )}
+              {aiLoaded && (
+                <span className={`badge ${aiValidated ? 'b-green' : 'b-yellow'}`} style={{ marginLeft: 'auto' }}>
+                  {aiValidated ? 'Archivee' : 'A valider'}
+                </span>
+              )}
             </div>
             {!aiLoaded && !aiLoading && (
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
@@ -191,10 +208,20 @@ export default function Budgets({ token }: BudgetsProps) {
               </div>
             )}
             {aiLoaded && (
-              <div style={{ fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                {typedText}
-                {!typingDone && <span className="tw-cursor" />}
-              </div>
+              <>
+                <div style={{ fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                  {typedText}
+                  {!typingDone && <span className="tw-cursor" />}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => generateBudgetAnalysis(data)} disabled={aiLoading}>
+                    Regenerer
+                  </button>
+                  <button className="btn btn-primary btn-sm" onClick={validateBudgetAnalysis} disabled={aiValidated || !typingDone}>
+                    {aiValidated ? 'Valide et archive' : 'Valider'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>

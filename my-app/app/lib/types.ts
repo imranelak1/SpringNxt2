@@ -12,7 +12,8 @@ export type View =
   | 'utilisateurs'
   | 'import-pdf'
   | 'gantt'
-  | 'simulation';
+  | 'simulation'
+  | 'archives-ia';
 
 export type AppRole = 'admin' | 'pm' | 'employee';
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getDashboard, getAiInsights } from '../../lib/api';
+import { archiveAiGeneration, getAiArchive } from '../../lib/aiArchive';
 import { SkeletonStatCards, SkeletonTable, SkeletonCard } from '../Skeleton';
 import type { AppRole, DashboardResponse, View } from '../../lib/types';
 
@@ -62,17 +63,31 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
   const [aiInsights, setAiInsights] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiLoaded, setAiLoaded] = useState(false);
+  const [aiValidated, setAiValidated] = useState(false);
+  const [aiArchive, setAiArchive] = useState(() => getAiArchive());
 
   const loadInsights = () => {
     if (aiLoading) return;
     setAiLoading(true);
+    setAiValidated(false);
     getAiInsights(token)
       .then((res) => { setAiInsights(res.insights); setAiLoaded(true); })
       .catch(() => { setAiInsights(['Erreur lors du chargement des insights IA.']); setAiLoaded(true); })
       .finally(() => setAiLoading(false));
   };
 
+  const validateInsights = () => {
+    archiveAiGeneration({
+      type: 'dashboard-insights',
+      title: 'Analyse NEXUS-IA',
+      payload: { insights: aiInsights },
+    });
+    setAiArchive(getAiArchive());
+    setAiValidated(true);
+  };
+
   useEffect(() => {
+    setAiArchive(getAiArchive());
     let isMounted = true;
 
     async function loadDashboard() {
@@ -228,6 +243,11 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
                   {aiLoading ? '…' : 'Générer'}
                 </button>
               )}
+              {aiLoaded && (
+                <span className={`badge ${aiValidated ? 'b-green' : 'b-yellow'}`} style={{ marginLeft: 'auto' }}>
+                  {aiValidated ? 'Archivee' : 'A valider'}
+                </span>
+              )}
             </div>
 
             {!aiLoaded && !aiLoading && (
@@ -254,6 +274,17 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
                 <div className="insight-txt">{insight}</div>
               </div>
             ))}
+
+            {aiLoaded && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <button className="btn btn-ghost btn-sm" onClick={loadInsights} disabled={aiLoading}>
+                  Regenerer
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={validateInsights} disabled={aiValidated}>
+                  {aiValidated ? 'Valide et archive' : 'Valider'}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="card">
@@ -270,6 +301,27 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
               <button className="btn btn-ghost" onClick={() => onNavigate('utilisateurs')}>
                 Open users view
               </button>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title">Archives IA</div>
+              <span className="badge b-gray">{aiArchive.length}</span>
+            </div>
+            <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {aiArchive.length === 0 ? (
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Aucune generation validee pour le moment.</div>
+              ) : (
+                aiArchive.slice(0, 5).map((item) => (
+                  <div key={item.id} style={{ padding: '9px 10px', borderRadius: '8px', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600 }}>{item.title}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {item.type} - {new Date(item.createdAt).toLocaleString('fr-FR')}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

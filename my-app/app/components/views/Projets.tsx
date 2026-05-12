@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import ProjectModal, { type ProjectData } from '../ProjectModal';
+import ProjectWorkspace from './ProjectWorkspace';
 import { createProject, deleteProject, getProjects, updateProject, analyzeProjectRisk } from '../../lib/api';
+import { archiveAiGeneration } from '../../lib/aiArchive';
 import { SkeletonTable } from '../Skeleton';
 import { useAlert } from '../AlertProvider';
 import type { AppRole, Project } from '../../lib/types';
@@ -50,7 +53,19 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [projects, setProjects] = useState<Project[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [analysisOverlayOpen, setAnalysisOverlayOpen] = useState(false);
   const wasActive = useRef(false);
+
+  const validateRiskAnalysis = (project: Project) => {
+    if (!riskPanel?.content) return;
+    archiveAiGeneration({
+      type: 'project-risk',
+      title: `Risque IA - ${project.name}`,
+      payload: { projectId: project.id, projectName: project.name, content: riskPanel.content },
+    });
+    setRiskPanel((current) => current ? { ...current, validated: true } : current);
+    setAnalysisOverlayOpen(false);
+  };
 
   useEffect(() => {
     if (isActive && !wasActive.current) setRefreshKey((k) => k + 1);
@@ -59,18 +74,63 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [riskPanel, setRiskPanel] = useState<{ projectId: number; content: string; loading: boolean } | null>(null);
+ const [editingProject, setEditingProject] = useState<Project | null>(null);
+const [openProject, setOpenProject] = useState<Project | null>(null);
 
-  const handleAnalyzeRisk = (projectId: number) => {
-    if (riskPanel?.projectId === projectId && !riskPanel.loading) {
+const [riskPanel, setRiskPanel] = useState<{
+  projectId: number;
+  content: string;
+  loading: boolean;
+  validated?: boolean;
+  fullContent?: string;
+} | null>(null);
+
+const generationTimer = useRef<number | null>(null);
+
+  const clearGenerationTimer = () => {
+    if (generationTimer.current !== null) {
+      window.clearTimeout(generationTimer.current);
+      generationTimer.current = null;
+    }
+  };
+
+  const revealContentLineByLine = (projectId: number, text: string) => {
+    const lines = text.split('\n');
+    let currentText = '';
+    let index = 0;
+
+    const addNextLine = () => {
+      if (index >= lines.length) {
+        setRiskPanel((current) => current && current.projectId === projectId ? { ...current, content: text, loading: false } : current);
+        clearGenerationTimer();
+        return;
+      }
+
+      currentText += (index > 0 ? '\n' : '') + lines[index];
+      index += 1;
+      setRiskPanel((current) => current && current.projectId === projectId ? { ...current, content: currentText, fullContent: text, loading: true } : current);
+      generationTimer.current = window.setTimeout(addNextLine, 60);
+    };
+
+    addNextLine();
+  };
+
+  const handleAnalyzeRisk = (projectId: number, force = false) => {
+    if (!force && riskPanel?.projectId === projectId && !riskPanel.loading) {
       setRiskPanel(null);
+      setAnalysisOverlayOpen(false);
+      clearGenerationTimer();
       return;
     }
-    setRiskPanel({ projectId, content: '', loading: true });
+    clearGenerationTimer();
+    setRiskPanel({ projectId, content: '', loading: true, validated: false, fullContent: '' });
+    setAnalysisOverlayOpen(true);
     analyzeProjectRisk(token, projectId)
-      .then((res) => setRiskPanel({ projectId, content: res.content, loading: false }))
-      .catch(() => setRiskPanel({ projectId, content: 'Analyse indisponible. Vérifiez votre clé GROQ_API_KEY.', loading: false }));
+      .then((res) => revealContentLineByLine(projectId, res.content))
+      .catch(() => {
+        clearGenerationTimer();
+        setRiskPanel({ projectId, content: 'Analyse indisponible. Vérifiez votre clé GROQ_API_KEY.', loading: false, validated: false });
+      });
   };
 
   useEffect(() => {
@@ -103,6 +163,12 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
       isMounted = false;
     };
   }, [selectedStatus, token, refreshKey]);
+
+  useEffect(() => {
+    return () => {
+      clearGenerationTimer();
+    };
+  }, []);
 
   if (role === 'employee') {
     return <div className="card"><div className="card-body">Projects are limited to admin and manager roles.</div></div>;
@@ -209,6 +275,21 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
     );
   }
 
+  if (openProject) {
+    return (
+      <ProjectWorkspace
+        project={openProject}
+        token={token}
+        role={role}
+        onBack={() => setOpenProject(null)}
+        onEdit={() => {
+          setEditingProject(openProject);
+          setOpenProject(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div>
       {showModal ? (
@@ -269,7 +350,7 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
 
       <div className="grid-3 mb18">
         {projects.map((project) => (
-          <div key={project.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }}>
+          <div key={project.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => setOpenProject(project)}>
             <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <div
@@ -319,8 +400,8 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
               </div>
             </div>
             <div style={{ padding: '0 18px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button className="action-btn" onClick={() => setEditingProject(project)}>Edit</button>
-              <button className="action-btn action-btn-danger" onClick={() => void handleDeleteProject(project.id)}>Delete</button>
+              <button className="action-btn" onClick={(e) => { e.stopPropagation(); setEditingProject(project); }}>Edit</button>
+              <button className="action-btn action-btn-danger" onClick={(e) => { e.stopPropagation(); void handleDeleteProject(project.id); }}>Delete</button>
               <button
                 className="action-btn"
                 style={{ marginLeft: 'auto', color: 'var(--accent)', borderColor: 'var(--accent)', fontSize: '11px' }}
@@ -329,22 +410,49 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
                 {riskPanel?.projectId === project.id && riskPanel.loading ? '…' : '✦ Risque IA'}
               </button>
             </div>
-            {riskPanel?.projectId === project.id && !riskPanel.loading && riskPanel.content && (
-              <div style={{
-                margin: '0 18px 16px', padding: '12px 14px', borderRadius: '8px',
-                background: 'rgba(61,138,255,0.06)', border: '1px solid rgba(61,138,255,0.2)',
-                fontSize: '12px', color: 'var(--text-dim)', lineHeight: 1.65, whiteSpace: 'pre-wrap',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <span className="ai-badge" style={{ fontSize: '10px' }}>✦ IA</span>
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)' }}>Analyse de risque</span>
-                </div>
-                {riskPanel.content}
-              </div>
-            )}
           </div>
         ))}
       </div>
+      {analysisOverlayOpen && riskPanel ? (
+        <div className="sweet-overlay" style={{ zIndex: 1300 }} onClick={() => setAnalysisOverlayOpen(false)}>
+          <div className="sweet-dialog wide" onClick={(event) => event.stopPropagation()}>
+            <button className="sweet-dialog-close" onClick={() => setAnalysisOverlayOpen(false)}>
+              <X size={16} />
+            </button>
+            <div className="sweet-dialog-header">
+              <div className="sweet-dialog-icon">
+                <X size={24} />
+              </div>
+              <div className="sweet-dialog-title">Analyse de risque</div>
+              <div className="sweet-dialog-subtitle">
+                {riskPanel.loading ? 'Génération du contenu en cours…' : riskPanel.validated ? 'Archivée' : 'À valider'}
+              </div>
+            </div>
+            <div className="sweet-dialog-content">
+              <div className="sweet-dialog-text">
+                {riskPanel.loading
+                  ? 'Merci de patienter pendant la génération du contenu IA. Le fond est flouté pour vous aider à rester concentré.'
+                  : riskPanel.content}
+              </div>
+            </div>
+            <div className="sweet-dialog-actions">
+              <button className="btn btn-secondary btn-sm" onClick={() => handleAnalyzeRisk(riskPanel.projectId, true)}>
+                Régénérer
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  const project = projects.find((project) => project.id === riskPanel.projectId);
+                  if (project) validateRiskAnalysis(project);
+                }}
+                disabled={riskPanel.loading || riskPanel.validated}
+              >
+                {riskPanel.validated ? 'Validé et archivé' : 'Valider'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -135,7 +135,7 @@ export default function Parametres({ token, email, role, firstName, lastName, on
 
           <div className="card">
             <div className="card-header">
-              <div className="card-title">Membres de l'équipe</div>
+              <div className="card-title">Membres de l&apos;équipe</div>
             </div>
             <div className="res-row">
               <div className="av" style={{ background: 'linear-gradient(135deg,#667eea,#764ba2)' }}>{initials}</div>
@@ -216,3 +216,4 @@ export default function Parametres({ token, email, role, firstName, lastName, on
     </div>
   );
 }
+

@@ -13,5 +13,6 @@ backend/src/main/resources/application-local.properties
 backend/*.txt
 
 # Generated files
+backend/.m2/
 my-app/NEXUS_Dashboard.html
 my-app/nexus-screenshots/

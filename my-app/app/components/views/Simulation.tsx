@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { simulateProject, createProject, createTask } from '../../lib/api';
+import { archiveAiGeneration } from '../../lib/aiArchive';
 import type {
   ProjectSimulationResponse,
   SimPhase,
@@ -168,12 +169,14 @@ export default function Simulation({ token, onNavigate }: SimulationProps) {
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(false);
+  const [validated, setValidated] = useState(false);
 
   const runSimulation = async () => {
     if (!description.trim()) return;
     setStep('loading');
     setError('');
     setLoadingStep(0);
+    setValidated(false);
 
     // Animate loading steps
     const stepInterval = setInterval(() => {
@@ -249,6 +252,16 @@ export default function Simulation({ token, onNavigate }: SimulationProps) {
   };
 
   // ── Form ──────────────────────────────────────────────────────────────────
+  const validateSimulation = () => {
+    if (!result) return;
+    archiveAiGeneration({
+      type: 'project-simulation',
+      title: result.projectName,
+      payload: result,
+    });
+    setValidated(true);
+  };
+
   if (step === 'form') {
     return (
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '8px 0' }}>
@@ -401,6 +414,9 @@ export default function Simulation({ token, onNavigate }: SimulationProps) {
             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: 600, background: RISK_BG[result.confidence] ?? RISK_BG.MEDIUM, color: CONFIDENCE_COLOR[result.confidence] ?? 'var(--text-muted)' }}>
               Confiance {result.confidence}
             </span>
+            <span className={`badge ${validated ? 'b-green' : 'b-yellow'}`}>
+              {validated ? 'Archivee' : 'A valider'}
+            </span>
           </div>
           <div style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '6px' }}>{result.projectName}</div>
           <div style={{ fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.6, maxWidth: '600px' }}>{result.description}</div>
@@ -409,11 +425,17 @@ export default function Simulation({ token, onNavigate }: SimulationProps) {
           <button className="btn btn-ghost btn-sm" onClick={() => { setStep('form'); setResult(null); setCreated(false); }}>
             ↩ Nouvelle
           </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => void runSimulation()}>
+            Regenerer
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={validateSimulation} disabled={validated}>
+            {validated ? 'Valide et archive' : 'Valider'}
+          </button>
           <button
             className="btn btn-primary"
             style={{ gap: '6px' }}
             onClick={() => void handleCreate()}
-            disabled={creating}
+            disabled={creating || !validated}
           >
             {creating ? 'Création…' : '⚡ Créer ce projet'}
           </button>

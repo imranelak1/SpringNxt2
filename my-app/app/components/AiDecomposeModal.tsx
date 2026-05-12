@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { decomposeTasks } from '../lib/api';
+import { archiveAiGeneration } from '../lib/aiArchive';
 import type { Project } from '../lib/types';
 
 interface AiDecomposeModalProps {
@@ -23,6 +24,7 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
+  const [validated, setValidated] = useState(false);
 
   const generate = async () => {
     if (!goal.trim()) return;
@@ -30,6 +32,7 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
     setError('');
     setTasks([]);
     setSelected(new Set());
+    setValidated(false);
     try {
       const res = await decomposeTasks(token, goal.trim(), selectedProjectId || undefined);
       const lines = res.content
@@ -48,7 +51,11 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
   const toggleTask = (i: number) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) {
+        next.delete(i);
+      } else {
+        next.add(i);
+      }
       return next;
     });
 
@@ -66,6 +73,20 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
     }
   };
 
+  const validateGeneration = () => {
+    archiveAiGeneration({
+      type: 'task-decomposition',
+      title: goal.trim() || 'Taches generees',
+      payload: {
+        goal,
+        projectId: selectedProjectId || null,
+        tasks,
+        selectedTasks: tasks.filter((_, i) => selected.has(i)),
+      },
+    });
+    setValidated(true);
+  };
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -74,7 +95,7 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="ai-badge">✦ IA</span>
-            <div className="modal-title">Décomposer un objectif avec l'IA</div>
+            <div className="modal-title">Décomposer un objectif avec l&apos;IA</div>
           </div>
           <div className="modal-close" onClick={onClose}><X size={14} strokeWidth={2.5} /></div>
         </div>
@@ -94,7 +115,7 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
           </div>
 
           <div className="form-group">
-            <label className="form-label">Décrivez l'objectif à atteindre</label>
+            <label className="form-label">Décrivez l&apos;objectif à atteindre</label>
             <textarea
               className="form-textarea"
               placeholder="Ex : Mettre en place un système d'authentification OAuth2 avec refresh token..."
@@ -123,6 +144,9 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
             <div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>
                 {tasks.length} tâches générées — sélectionnez celles à ajouter :
+                <span className={`badge ${validated ? 'b-green' : 'b-yellow'}`} style={{ marginLeft: '8px' }}>
+                  {validated ? 'Archivee' : 'A valider'}
+                </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {tasks.map((t, i) => (
@@ -153,10 +177,16 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
         {tasks.length > 0 && (
           <div className="modal-footer">
             <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+            <button className="btn btn-ghost" onClick={() => void generate()} disabled={loading}>
+              Regenerer
+            </button>
+            <button className="btn btn-primary" onClick={validateGeneration} disabled={validated}>
+              {validated ? 'Valide et archive' : 'Valider'}
+            </button>
             <button
               className="btn btn-primary"
               onClick={() => void handleAdd()}
-              disabled={adding || selected.size === 0 || !selectedProjectId}
+              disabled={adding || selected.size === 0 || !selectedProjectId || !validated}
             >
               {adding ? 'Création…' : `Ajouter ${selected.size} tâche${selected.size > 1 ? 's' : ''}`}
             </button>
@@ -167,3 +197,4 @@ export default function AiDecomposeModal({ token, projects, onClose, onAddTasks 
     document.body,
   );
 }
+

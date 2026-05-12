@@ -50,8 +50,11 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
 
   useEffect(() => {
     let active = true;
-    setTasksLoading(true);
-    getTasks(token, undefined, undefined, project.id)
+    Promise.resolve()
+      .then(() => {
+        if (active) setTasksLoading(true);
+        return getTasks(token, undefined, undefined, project.id);
+      })
       .then((r) => { if (active) setTasks(r.content); })
       .finally(() => { if (active) setTasksLoading(false); });
     return () => { active = false; };
@@ -59,8 +62,11 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
 
   useEffect(() => {
     let active = true;
-    setMembersLoading(true);
-    getProjectMembers(token, project.id)
+    Promise.resolve()
+      .then(() => {
+        if (active) setMembersLoading(true);
+        return getProjectMembers(token, project.id);
+      })
       .then((r) => { if (active) setMembers(r); })
       .finally(() => { if (active) setMembersLoading(false); });
     return () => { active = false; };

@@ -1,11 +1,20 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
+
+type AlertType = 'success' | 'error';
 
 interface Toast {
   id: number;
-  type: 'success' | 'error';
+  type: AlertType;
   title: string;
   message?: string;
 }
@@ -15,6 +24,10 @@ interface ConfirmOptions {
   message?: string;
   confirmText?: string;
   tone?: 'warning' | 'danger' | 'info';
+}
+
+interface ConfirmState extends ConfirmOptions {
+  resolve: (value: boolean) => void;
 }
 
 interface AlertApi {
@@ -31,10 +44,6 @@ export function useAlert(): AlertApi {
   return ctx;
 }
 
-interface ConfirmState extends ConfirmOptions {
-  resolve: (value: boolean) => void;
-}
-
 let nextId = 0;
 
 export function AlertProvider({ children }: { children: React.ReactNode }) {
@@ -43,19 +52,24 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const timerRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const dismiss = useCallback((id: number) => {
     clearTimeout(timerRef.current[id]);
     delete timerRef.current[id];
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  const push = useCallback((type: 'success' | 'error', title: string, message?: string) => {
-    const id = ++nextId;
-    setToasts((prev) => [...prev, { id, type, title, message }]);
-    timerRef.current[id] = setTimeout(() => dismiss(id), 4000);
-  }, [dismiss]);
+  const push = useCallback(
+    (type: AlertType, title: string, message?: string) => {
+      const id = ++nextId;
+      setToasts((prev) => [...prev, { id, type, title, message }]);
+      timerRef.current[id] = setTimeout(() => dismiss(id), 4000);
+    },
+    [dismiss],
+  );
 
   const api: AlertApi = {
     success: (title, message) => push('success', title, message),
@@ -71,7 +85,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     setConfirm(null);
   };
 
-  const toastBg = (type: 'success' | 'error') =>
+  const toastColor = (type: AlertType) =>
     type === 'success' ? 'var(--accent)' : 'var(--accent3)';
 
   return (
@@ -81,7 +95,6 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       {mounted &&
         createPortal(
           <>
-            {/* Toasts */}
             <div
               style={{
                 position: 'fixed',
@@ -94,14 +107,15 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
                 pointerEvents: 'none',
               }}
             >
-              {toasts.map((t) => (
+              {toasts.map((toast) => (
                 <div
-                  key={t.id}
+                  key={toast.id}
+                  onClick={() => dismiss(toast.id)}
                   style={{
                     pointerEvents: 'auto',
                     background: 'var(--surface2)',
-                    border: `1px solid ${toastBg(t.type)}44`,
-                    borderLeft: `3px solid ${toastBg(t.type)}`,
+                    border: `1px solid ${toastColor(toast.type)}44`,
+                    borderLeft: `3px solid ${toastColor(toast.type)}`,
                     borderRadius: '10px',
                     padding: '12px 16px',
                     minWidth: '260px',
@@ -109,42 +123,64 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
                     boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
                     cursor: 'pointer',
                   }}
-                  onClick={() => dismiss(t.id)}
                 >
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: toastBg(t.type) }}>
-                    {t.title}
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: toastColor(toast.type),
+                    }}
+                  >
+                    {toast.title}
                   </div>
-                  {t.message && (
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
-                      {t.message}
+                  {toast.message && (
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                        marginTop: '3px',
+                      }}
+                    >
+                      {toast.message}
                     </div>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* Confirm dialog */}
             {confirm && (
               <div
                 className="modal-overlay"
                 style={{ zIndex: 10000 }}
-                onClick={(e) => e.target === e.currentTarget && handleConfirm(false)}
+                onClick={(event) =>
+                  event.target === event.currentTarget && handleConfirm(false)
+                }
               >
                 <div className="modal" style={{ maxWidth: '400px' }}>
                   <div className="modal-header">
                     <div className="modal-title">{confirm.title}</div>
                   </div>
                   {confirm.message && (
-                    <div className="modal-body" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    <div
+                      className="modal-body"
+                      style={{ fontSize: '13px', color: 'var(--text-muted)' }}
+                    >
                       {confirm.message}
                     </div>
                   )}
                   <div className="modal-footer">
-                    <button className="btn btn-ghost" onClick={() => handleConfirm(false)}>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => handleConfirm(false)}
+                    >
                       Annuler
                     </button>
                     <button
-                      className={`btn ${confirm.tone === 'warning' || confirm.tone === 'danger' ? 'btn-danger' : 'btn-primary'}`}
+                      className={`btn ${
+                        confirm.tone === 'warning' || confirm.tone === 'danger'
+                          ? 'btn-danger'
+                          : 'btn-primary'
+                      }`}
                       onClick={() => handleConfirm(true)}
                     >
                       {confirm.confirmText ?? 'Confirmer'}

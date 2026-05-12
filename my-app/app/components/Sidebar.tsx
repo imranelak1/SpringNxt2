@@ -13,6 +13,7 @@ import {
   Sparkles,
   FileUp,
   FlaskConical,
+  Archive,
   ShieldCheck,
   Bell,
   Settings,
@@ -56,6 +57,7 @@ const navSections = [
       { view: 'rapports' as View, icon: Sparkles, label: 'Rapports IA' },
       { view: 'simulation' as View, icon: FlaskConical, label: 'Project Studio' },
       { view: 'import-pdf' as View, icon: FileUp, label: 'Import PDF' },
+      { view: 'archives-ia' as View, icon: Archive, label: 'Archives IA' },
     ],
   },
   {

@@ -37,7 +37,6 @@ export default function Performance({ token }: PerformanceProps) {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     getPerformance(token)
       .then((res) => { if (active) setData(res); })
       .catch((err) => { if (active) setError(err.message ?? 'Erreur'); })

@@ -18,6 +18,8 @@ import Utilisateurs from './components/views/Utilisateurs';
 import PdfImport from './components/views/PdfImport';
 import GanttView from './components/views/GanttView';
 import Simulation from './components/views/Simulation';
+import AiArchives from './components/views/AiArchives';
+import { AI_ARCHIVE_NAVIGATE_EVENT } from './lib/aiArchive';
 import ChatWidget from './components/ChatWidget';
 import { AlertProvider } from './components/AlertProvider';
 import type { AuthSession, View } from './lib/types';
@@ -68,6 +70,12 @@ export default function Home() {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
+  useEffect(() => {
+    const openArchives = () => setActiveView('archives-ia');
+    window.addEventListener(AI_ARCHIVE_NAVIGATE_EVENT, openArchives);
+    return () => window.removeEventListener(AI_ARCHIVE_NAVIGATE_EVENT, openArchives);
+  }, []);
+
   const handleLogin = (nextSession: AuthSession) => {
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
     setSessionOverride(nextSession);
@@ -109,6 +117,7 @@ export default function Home() {
     'import-pdf': <PdfImport token={session.token} />,
     gantt: <GanttView token={session.token} role={session.role} />,
     simulation: <Simulation token={session.token} onNavigate={setActiveView} />,
+    'archives-ia': <AiArchives />,
   };
 
   return (

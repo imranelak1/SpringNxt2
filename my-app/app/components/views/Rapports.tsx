@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getReports, askAi } from '../../lib/api';
+import { archiveAiGeneration } from '../../lib/aiArchive';
 import { useTypewriter } from '../../lib/useTypewriter';
 import type { ReportsResponse } from '../../lib/types';
 
@@ -115,11 +116,14 @@ export default function Rapports({ token }: RapportsProps) {
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiLoaded, setAiLoaded] = useState(false);
+  const [aiValidated, setAiValidated] = useState(false);
   const { displayed: typedText, done: typingDone } = useTypewriter(aiLoaded ? aiText : '');
 
   const generateAnalysis = (reportData: ReportsResponse) => {
     if (aiLoading) return;
     setAiLoading(true);
+    setAiLoaded(false);
+    setAiValidated(false);
     const prompt = `Génère une analyse narrative complète du portfolio de projets en 4 points clés. Données : ${reportData.totalProjects} projets (${reportData.activeProjects} actifs, ${reportData.completedProjects} livrés), taux de complétion tâches : ${reportData.deliveryRate}%, score santé moyen : ${reportData.avgHealthScore}/100, ${reportData.totalTasks} tâches dont ${reportData.completedTasks} terminées. Sois direct, factuel et professionnel.`;
     askAi(token, prompt)
       .then((res) => { setAiText(res.content); setAiLoaded(true); })
@@ -127,9 +131,17 @@ export default function Rapports({ token }: RapportsProps) {
       .finally(() => setAiLoading(false));
   };
 
+  const validateReportAnalysis = () => {
+    archiveAiGeneration({
+      type: 'report-analysis',
+      title: 'Analyse intelligente',
+      payload: { content: aiText },
+    });
+    setAiValidated(true);
+  };
+
   useEffect(() => {
     let active = true;
-    setLoading(true);
     getReports(token)
       .then((res) => { if (active) setData(res); })
       .catch((err) => { if (active) setError(err.message ?? 'Erreur'); })
@@ -256,14 +268,22 @@ export default function Rapports({ token }: RapportsProps) {
                   {aiLoading ? '…' : 'Générer'}
                 </button>
               )}
-              {aiLoaded && typingDone && (
-                <button
-                  className="btn btn-ghost btn-sm"
-                  style={{ marginLeft: 'auto', fontSize: '11px' }}
-                  onClick={() => void exportPdf(data, aiText)}
-                >
-                  ↓ Exporter PDF
-                </button>
+              {aiLoaded && (
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`badge ${aiValidated ? 'b-green' : 'b-yellow'}`}>
+                    {aiValidated ? 'Archivee' : 'A valider'}
+                  </span>
+
+                  {typingDone && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: '11px' }}
+                      onClick={() => void exportPdf(data, aiText)}
+                    >
+                      ↓ Exporter PDF
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             {!aiLoaded && !aiLoading && (
@@ -278,10 +298,20 @@ export default function Rapports({ token }: RapportsProps) {
               </div>
             )}
             {aiLoaded && (
-              <div style={{ fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                {typedText}
-                {!typingDone && <span className="tw-cursor" />}
-              </div>
+              <>
+                <div style={{ fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                  {typedText}
+                  {!typingDone && <span className="tw-cursor" />}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => generateAnalysis(data)} disabled={aiLoading}>
+                    Regenerer
+                  </button>
+                  <button className="btn btn-primary btn-sm" onClick={validateReportAnalysis} disabled={aiValidated || !typingDone}>
+                    {aiValidated ? 'Valide et archive' : 'Valider'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
 

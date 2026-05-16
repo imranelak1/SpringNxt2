@@ -38,6 +38,15 @@ function getStatusBadge(status: string) {
   return 'b-gray';
 }
 
+function normalizeGitHubRepo(repo: string | null | undefined) {
+  if (!repo) return null;
+  const trimmed = repo.trim()
+    .replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+    .replace(/^github\.com\//i, '')
+    .replace(/\/+$/, '');
+  return trimmed || null;
+}
+
 type Tab = 'tasks' | 'members';
 
 export default function ProjectWorkspace({ project, token, role, onBack, onEdit }: ProjectWorkspaceProps) {
@@ -71,6 +80,7 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
   const blocked = tasks.filter((t) => t.status === 'BLOCKED').length;
   const todo = tasks.filter((t) => t.status === 'TODO').length;
 
+  const normalizedRepo = normalizeGitHubRepo(project.githubRepo);
   const filteredTasks = taskFilter === 'ALL' ? tasks : tasks.filter((t) => t.status === taskFilter);
 
   return (
@@ -137,15 +147,15 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
           { label: 'Budget', value: project.budget ? `${project.budget.toLocaleString()} MAD` : '—', color: 'var(--text-muted)' },
           {
             label: 'GitHub',
-            value: project.githubRepo ? (
+            value: normalizedRepo ? (
               <a
-                href={`https://github.com/${project.githubRepo}`}
+                href={`https://github.com/${normalizedRepo}`}
                 target="_blank"
                 rel="noreferrer"
                 style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '12px' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                {project.githubRepo}
+                {normalizedRepo}
               </a>
             ) : '—',
             color: 'var(--text-muted)',

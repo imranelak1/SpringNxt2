@@ -25,6 +25,14 @@ export interface ProjectData {
   githubRepo: string;
 }
 
+function normalizeGitHubRepo(repo: string) {
+  return repo
+    .trim()
+    .replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+    .replace(/^github\.com\//i, '')
+    .replace(/\/+$/, '');
+}
+
 const defaultProject: ProjectData = {
   name: '',
   description: '',
@@ -70,7 +78,10 @@ export default function ProjectModal({
     setError('');
 
     try {
-      await onSave?.(form);
+      await onSave?.({
+        ...form,
+        githubRepo: normalizeGitHubRepo(form.githubRepo),
+      });
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save project.');
       setLoading(false);

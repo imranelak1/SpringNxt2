@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Swal from 'sweetalert2';
 import { updateProfile } from '../../lib/api';
 import type { AppRole } from '../../lib/types';
 
@@ -35,8 +36,6 @@ export default function Parametres({ token, email, role, firstName, lastName, on
   const [firstNameValue, setFirstNameValue] = useState(firstName);
   const [lastNameValue, setLastNameValue] = useState(lastName);
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [saveError, setSaveError] = useState('');
 
   const [prefs, setPrefs] = useState({ darkMode: true, iaResume: true, previsions: true, alertes: true, temps: false });
   const [integrations, setIntegrations] = useState({ slack: true, drive: true, github: true, stripe: false, notion: false });
@@ -53,23 +52,58 @@ export default function Parametres({ token, email, role, firstName, lastName, on
     const fn = firstNameValue.trim();
     const ln = lastNameValue.trim();
     if (!fn || !ln) {
-      setSaveStatus('error');
-      setSaveError('Le prénom et le nom sont requis.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Le prénom et le nom sont requis.',
+        background: 'var(--surface)',
+        color: 'var(--text)',
+        confirmButtonColor: '#0d5abc',
+        customClass: {
+          popup: 'swal-popup',
+          title: 'swal-title',
+          content: 'swal-content',
+          confirmButton: 'swal-confirm-btn',
+        },
+      });
       return;
     }
 
     setSaving(true);
-    setSaveStatus('idle');
-    setSaveError('');
 
     try {
       const updated = await updateProfile(token, { firstName: fn, lastName: ln });
       onProfileUpdated(updated.firstName ?? fn, updated.lastName ?? ln);
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès!',
+        text: 'Profil mis à jour avec succès.',
+        timer: 2000,
+        showConfirmButton: false,
+        background: 'var(--surface)',
+        color: 'var(--text)',
+        customClass: {
+          popup: 'swal-popup',
+          title: 'swal-title',
+          content: 'swal-content',
+        },
+      });
     } catch (err) {
-      setSaveStatus('error');
-      setSaveError(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.');
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.';
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: errorMessage,
+        background: 'var(--surface)',
+        color: 'var(--text)',
+        confirmButtonColor: '#0d5abc',
+        customClass: {
+          popup: 'swal-popup',
+          title: 'swal-title',
+          content: 'swal-content',
+          confirmButton: 'swal-confirm-btn',
+        },
+      });
     } finally {
       setSaving(false);
     }
@@ -78,8 +112,6 @@ export default function Parametres({ token, email, role, firstName, lastName, on
   const handleCancel = () => {
     setFirstNameValue(firstName);
     setLastNameValue(lastName);
-    setSaveStatus('idle');
-    setSaveError('');
   };
 
   return (
@@ -87,6 +119,13 @@ export default function Parametres({ token, email, role, firstName, lastName, on
       <div style={{ marginBottom: '20px' }}>
         <div className="section-title">Paramètres du compte</div>
         <div className="section-sub">Gérez votre profil, équipe et préférences</div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', width: 'fit-content' }}>
+        <button className="btn btn-primary" onClick={() => void handleSave()} disabled={saving}>
+          {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
+        </button>
+        <button className="btn btn-ghost" onClick={handleCancel} disabled={saving}>Annuler</button>
       </div>
 
       <div className="grid-rl">
@@ -111,7 +150,7 @@ export default function Parametres({ token, email, role, firstName, lastName, on
                 <input
                   className="settings-input"
                   value={firstNameValue}
-                  onChange={(e) => { setFirstNameValue(e.target.value); setSaveStatus('idle'); }}
+                  onChange={(e) => { setFirstNameValue(e.target.value); }}
                 />
               </div>
               <div className="settings-row">
@@ -119,7 +158,7 @@ export default function Parametres({ token, email, role, firstName, lastName, on
                 <input
                   className="settings-input"
                   value={lastNameValue}
-                  onChange={(e) => { setLastNameValue(e.target.value); setSaveStatus('idle'); }}
+                  onChange={(e) => { setLastNameValue(e.target.value); }}
                 />
               </div>
               <div className="settings-row">
@@ -194,23 +233,6 @@ export default function Parametres({ token, email, role, firstName, lastName, on
             </div>
           </div>
 
-          {saveStatus === 'success' && (
-            <div style={{ fontSize: '13px', color: 'var(--accent)', background: 'rgba(79,255,176,0.08)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(79,255,176,0.2)' }}>
-              ✓ Profil mis à jour avec succès.
-            </div>
-          )}
-          {saveStatus === 'error' && (
-            <div style={{ fontSize: '13px', color: 'var(--accent3)', background: 'rgba(255,107,107,0.08)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,107,107,0.2)' }}>
-              {saveError}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => void handleSave()} disabled={saving}>
-              {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
-            </button>
-            <button className="btn btn-ghost" onClick={handleCancel} disabled={saving}>Annuler</button>
-          </div>
         </div>
       </div>
     </div>

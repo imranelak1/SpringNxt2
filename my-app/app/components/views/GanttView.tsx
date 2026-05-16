@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Plus } from 'lucide-react';
 import { getProjects, getTasks } from '../../lib/api';
 import type { Project, Task } from '../../lib/types';
 
@@ -50,6 +51,14 @@ export default function GanttView({ token, role }: GanttViewProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (groupKey: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -160,150 +169,160 @@ export default function GanttView({ token, role }: GanttViewProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
         <div style={{ flex: 1 }}>
           <div className="section-title" style={{ margin: 0 }}>
-            Project timeline
+            Project Timeline
           </div>
           <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            {projects.length} projects and {tasks.length} tasks from backend dates
+            {projects.length} projects and {tasks.length} tasks
           </div>
         </div>
       </div>
 
       <div className="card">
-        <div style={{ padding: '0', overflowX: 'auto' }}>
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ paddingTop: '0', overflowX: 'auto' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, backgroundColor: 'var(--surface)', zIndex: 10 }}>
             <div
               style={{
-                minWidth: '220px',
+                minWidth: '280px',
                 borderRight: '1px solid var(--border)',
-                padding: '8px 14px',
-                fontSize: '11px',
+                padding: '12px 14px',
+                fontSize: '12px',
                 color: 'var(--text-muted)',
-                fontWeight: 600,
-              }}
-            >
-              PROJECT / TASK
-            </div>
-            <div
-              style={{
-                flex: 1,
-                padding: '8px 14px',
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-                fontWeight: 600,
+                fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
               }}
             >
-              {ganttData.minDate.toLocaleDateString()} - {ganttData.maxDate.toLocaleDateString()}
+              Task name
+            </div>
+            <div
+              style={{
+                flex: 1,
+                padding: '12px 14px',
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                fontWeight: 600,
+                display: 'flex',
+                gap: '20px',
+              }}
+            >
+              {Array.from({ length: Math.ceil(ganttData.totalDays / 7) }).map((_, i) => (
+                <div key={i} style={{ minWidth: '80px', textAlign: 'center' }}>
+                  {i + 1}
+                </div>
+              ))}
             </div>
           </div>
 
-          {ganttData.projects.map((project) => (
-            <div key={project.id}>
-              <div
-                style={{
-                  display: 'flex',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  minHeight: '56px',
-                  alignItems: 'center',
-                }}
-              >
-                <div style={{ minWidth: '220px', borderRight: '1px solid var(--border)', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '12.5px', fontWeight: 500, marginBottom: '3px' }}>{project.name}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {project.status} - {project.progressPercentage ?? 0}%
-                  </div>
-                </div>
-                <div style={{ flex: 1, position: 'relative', height: '56px' }}>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${(project.offsetDays / ganttData.totalDays) * 100}%`,
-                      width: `${(project.durationDays / ganttData.totalDays) * 100}%`,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      height: '28px',
-                      borderRadius: '6px',
-                      background: 'linear-gradient(90deg,var(--accent2),var(--accent))',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: `${project.progressPercentage ?? 0}%`,
-                        background: 'rgba(0,0,0,0.18)',
-                      }}
-                    ></div>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: 'rgba(0,0,0,0.85)',
-                        padding: '0 10px',
-                        position: 'relative',
-                        zIndex: 1,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {project.name}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          {/* Task rows */}
+          {ganttData.projects.map((project) => {
+            const groupKey = `project-${project.id}`;
+            const isExpanded = expandedGroups[groupKey] !== false;
 
-              {project.tasks.map((task) => (
+            return (
+              <div key={project.id}>
+                {/* Project group header */}
                 <div
-                  key={task.id}
                   style={{
                     display: 'flex',
-                    borderBottom: '1px solid rgba(255,255,255,0.03)',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
                     minHeight: '44px',
                     alignItems: 'center',
-                    background: 'rgba(255,255,255,0.01)',
                   }}
                 >
-                  <div style={{ minWidth: '220px', borderRight: '1px solid var(--border)', padding: '8px 14px 8px 24px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 500, marginBottom: '2px' }}>{task.title}</div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
-                      {task.status} - {task.progressPercentage}%
-                    </div>
+                  <div
+                    style={{
+                      minWidth: '280px',
+                      borderRight: '1px solid var(--border)',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => toggleGroup(groupKey)}
+                  >
+                    <ChevronDown
+                      size={16}
+                      style={{
+                        transition: 'transform 0.2s',
+                        transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                        color: 'var(--text-muted)',
+                      }}
+                    />
+                    <div style={{ fontSize: '13px', fontWeight: 600 }}>{project.name}</div>
                   </div>
                   <div style={{ flex: 1, position: 'relative', height: '44px' }}>
                     <div
                       style={{
                         position: 'absolute',
-                        left: `${(task.offsetDays / ganttData.totalDays) * 100}%`,
-                        width: `${(task.durationDays / ganttData.totalDays) * 100}%`,
+                        left: `${(project.offsetDays / ganttData.totalDays) * 100}%`,
+                        width: `${(project.durationDays / ganttData.totalDays) * 100}%`,
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        height: '20px',
-                        borderRadius: '5px',
-                        background: 'linear-gradient(90deg,var(--accent4),var(--accent2))',
+                        height: '24px',
+                        borderRadius: '4px',
+                        background: '#2dd4bf',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '11px',
+                        fontWeight: 600,
                         overflow: 'hidden',
+                      }}
+                    >
+                      {project.name}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Task rows under project */}
+                {isExpanded &&
+                  project.tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      style={{
+                        display: 'flex',
+                        borderBottom: '1px solid rgba(255,255,255,0.02)',
+                        minHeight: '40px',
+                        alignItems: 'center',
+                        background: 'rgba(255,255,255,0.008)',
                       }}
                     >
                       <div
                         style={{
-                          position: 'absolute',
-                          left: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: `${task.progressPercentage}%`,
-                          background: 'rgba(0,0,0,0.16)',
+                          minWidth: '280px',
+                          borderRight: '1px solid rgba(255,255,255,0.03)',
+                          padding: '8px 14px 8px 40px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '12px',
+                          color: 'var(--text)',
                         }}
-                      ></div>
+                      >
+                        {task.title}
+                      </div>
+                      <div style={{ flex: 1, position: 'relative', height: '40px' }}>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: `${(task.offsetDays / ganttData.totalDays) * 100}%`,
+                            width: `${(task.durationDays / ganttData.totalDays) * 100}%`,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            height: '20px',
+                            borderRadius: '3px',
+                            background: '#0ea5e9',
+                          }}
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
+                  ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

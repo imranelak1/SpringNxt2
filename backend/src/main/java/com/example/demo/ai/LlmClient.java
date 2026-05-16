@@ -14,7 +14,7 @@ import java.util.Map;
 @Component
 public class LlmClient {
 
-    @Value("${groq.api-key:}")
+    @Value("${groq.api.key:}")
     private String apiKey;
 
     @Value("${groq.model:llama-3.3-70b-versatile}")

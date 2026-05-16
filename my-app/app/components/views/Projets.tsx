@@ -48,6 +48,15 @@ function getStatusClass(status: string) {
   return 'b-gray';
 }
 
+function normalizeGitHubRepo(repo: string | null) {
+  if (!repo) return null;
+  return repo
+    .trim()
+    .replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+    .replace(/^github\.com\//i, '')
+    .replace(/\/+$/, '') || null;
+}
+
 export default function Projets({ token, role, isActive }: ProjetsProps) {
   const alerts = useAlert();
   const [selectedStatus, setSelectedStatus] = useState('ALL');
@@ -349,7 +358,7 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
 
       <div className="grid-3 mb18">
         {projects.map((project) => (
-          <div key={project.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => setOpenProject(project)}>
+          <div key={project.id} className="card" style={{ transition: 'all 0.2s' }}>
             <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <div
@@ -368,7 +377,12 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
                   {project.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600 }}>{project.name}</div>
+                  <div
+                    style={{ fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+                    onClick={() => setOpenProject(project)}
+                  >
+                    {project.name}
+                  </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                     Created {formatDate(project.createdAt)}
                   </div>
@@ -401,10 +415,25 @@ export default function Projets({ token, role, isActive }: ProjetsProps) {
             <div style={{ padding: '0 18px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button className="action-btn" onClick={(e) => { e.stopPropagation(); setEditingProject(project); }}>Edit</button>
               <button className="action-btn action-btn-danger" onClick={(e) => { e.stopPropagation(); void handleDeleteProject(project.id); }}>Delete</button>
+              {normalizeGitHubRepo(project.githubRepo) ? (
+                <a
+                  className="action-btn"
+                  style={{ color: 'var(--accent)', borderColor: 'var(--accent)', fontSize: '11px' }}
+                  href={`https://github.com/${normalizeGitHubRepo(project.githubRepo)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  GitHub
+                </a>
+              ) : null}
               <button
                 className="action-btn"
                 style={{ marginLeft: 'auto', color: 'var(--accent)', borderColor: 'var(--accent)', fontSize: '11px' }}
-                onClick={() => handleAnalyzeRisk(project.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAnalyzeRisk(project.id);
+                }}
               >
                 {riskPanel?.projectId === project.id && riskPanel.loading ? '…' : '✦ Risque IA'}
               </button>

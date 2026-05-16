@@ -122,6 +122,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
                     maxWidth: '360px',
                     boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
                     cursor: 'pointer',
+                    overflowWrap: 'anywhere',
                   }}
                 >
                   <div

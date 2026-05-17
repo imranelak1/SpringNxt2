@@ -22,8 +22,12 @@ import type {
   ProjectMember,
   Project,
   ReportsResponse,
+  ScrumBoard,
+  Sprint,
+  SprintInput,
   Task,
   TaskComment,
+  TaskScrumInput,
   UserSummary,
 } from './types';
 
@@ -350,6 +354,83 @@ export function deleteTask(token: string, taskId: number) {
     `/api/tasks/${taskId}`,
     {
       method: 'DELETE',
+    },
+    token,
+  );
+}
+
+export function getScrumBoard(token: string, projectId: number) {
+  return request<ScrumBoard>(`/api/projects/${projectId}/scrum`, {}, token);
+}
+
+export function createSprint(token: string, projectId: number, input: SprintInput) {
+  return request<Sprint>(
+    `/api/projects/${projectId}/sprints`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+    token,
+  );
+}
+
+export function updateSprint(token: string, sprintId: number, input: SprintInput) {
+  return request<Sprint>(
+    `/api/sprints/${sprintId}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    },
+    token,
+  );
+}
+
+export function startSprint(token: string, sprintId: number) {
+  return request<Sprint>(
+    `/api/sprints/${sprintId}/start`,
+    {
+      method: 'PUT',
+    },
+    token,
+  );
+}
+
+export function closeSprint(token: string, sprintId: number) {
+  return request<Sprint>(
+    `/api/sprints/${sprintId}/close`,
+    {
+      method: 'PUT',
+    },
+    token,
+  );
+}
+
+export function assignTaskToSprint(token: string, sprintId: number, taskId: number) {
+  return request<Task>(
+    `/api/sprints/${sprintId}/tasks/${taskId}`,
+    {
+      method: 'PUT',
+    },
+    token,
+  );
+}
+
+export function removeTaskFromSprint(token: string, sprintId: number, taskId: number) {
+  return request<Task>(
+    `/api/sprints/${sprintId}/tasks/${taskId}`,
+    {
+      method: 'DELETE',
+    },
+    token,
+  );
+}
+
+export function updateTaskScrum(token: string, taskId: number, input: TaskScrumInput) {
+  return request<Task>(
+    `/api/tasks/${taskId}/scrum`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(input),
     },
     token,
   );

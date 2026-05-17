@@ -1,8 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getTasks, getProjectMembers } from '../../lib/api';
-import type { AppRole, Project, Task, ProjectMember } from '../../lib/types';
+import { Pencil, Trash2, UserPlus } from 'lucide-react';
+import { useAlert } from '../AlertProvider';
+import ProjectMemberModal, { type ProjectMemberFormData } from '../ProjectMemberModal';
+import {
+  createProjectMember,
+  deleteProjectMember,
+  getProjectMembers,
+  getTasks,
+  getUsers,
+  updateProjectMember,
+} from '../../lib/api';
+import type { AppRole, Project, Task, ProjectMember, UserSummary } from '../../lib/types';
+import ScrumView from './ScrumView';
 
 interface ProjectWorkspaceProps {
   project: Project;
@@ -47,15 +58,21 @@ function normalizeGitHubRepo(repo: string | null | undefined) {
   return trimmed || null;
 }
 
-type Tab = 'tasks' | 'members';
+type Tab = 'tasks' | 'scrum' | 'members';
 
 export default function ProjectWorkspace({ project, token, role, onBack, onEdit }: ProjectWorkspaceProps) {
+  const canManage = role === 'admin' || role === 'pm';
+  const alerts = useAlert();
   const [tab, setTab] = useState<Tab>('tasks');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [users, setUsers] = useState<UserSummary[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [membersLoading, setMembersLoading] = useState(true);
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<ProjectMember | null>(null);
   const [taskFilter, setTaskFilter] = useState('ALL');
+  const [tasksRefreshKey, setTasksRefreshKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -67,19 +84,72 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
       .then((r) => { if (active) setTasks(r.content); })
       .finally(() => { if (active) setTasksLoading(false); });
     return () => { active = false; };
-  }, [token, project.id]);
+  }, [token, project.id, tasksRefreshKey]);
 
   useEffect(() => {
     let active = true;
     Promise.resolve()
       .then(() => {
         if (active) setMembersLoading(true);
-        return getProjectMembers(token, project.id);
+        return Promise.all([
+          getProjectMembers(token, project.id),
+          canManage ? getUsers(token) : Promise.resolve([] as UserSummary[]),
+        ]);
       })
-      .then((r) => { if (active) setMembers(r); })
+      .then(([projectMembers, usersResponse]) => {
+        if (!active) return;
+        setMembers(projectMembers);
+        setUsers(usersResponse);
+      })
       .finally(() => { if (active) setMembersLoading(false); });
     return () => { active = false; };
-  }, [token, project.id]);
+  }, [token, project.id, canManage]);
+
+  const handleCreateMember = async (form: ProjectMemberFormData) => {
+    const createdMember = await createProjectMember(token, {
+      projectId: project.id,
+      userId: Number(form.userId),
+      role: form.role,
+      allocationPercentage: form.allocationPercentage ? Number(form.allocationPercentage) : null,
+    });
+
+    setMembers((current) => [...current, createdMember]);
+  };
+
+  const handleUpdateMember = async (form: ProjectMemberFormData) => {
+    if (!editingMember) return;
+
+    const updatedMember = await updateProjectMember(token, editingMember.id, {
+      projectId: project.id,
+      userId: Number(form.userId),
+      role: form.role,
+      allocationPercentage: form.allocationPercentage ? Number(form.allocationPercentage) : null,
+    });
+
+    setMembers((current) =>
+      current.map((member) => (member.id === updatedMember.id ? updatedMember : member)),
+    );
+    setEditingMember(null);
+  };
+
+  const handleDeleteMember = async (member: ProjectMember) => {
+    const confirmed = await alerts.confirm({
+      title: 'Retirer ce membre ?',
+      message: `${member.firstName} ${member.lastName} sera retiré(e) du projet ${project.name}.`,
+      confirmText: 'Retirer',
+      tone: 'warning',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await deleteProjectMember(token, member.id);
+      setMembers((current) => current.filter((item) => item.id !== member.id));
+      alerts.success('Membre retiré', `${member.firstName} ${member.lastName} a été retiré(e) du projet.`);
+    } catch (deleteError) {
+      alerts.error('Suppression impossible', deleteError instanceof Error ? deleteError.message : 'Réessayez dans un instant.');
+    }
+  };
 
   const done = tasks.filter((t) => t.status === 'DONE').length;
   const inProgress = tasks.filter((t) => t.status === 'IN_PROGRESS').length;
@@ -134,7 +204,7 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
             </div>
           )}
         </div>
-        {(role === 'admin' || role === 'pm') && (
+        {canManage && (
           <button className="btn btn-ghost btn-sm" onClick={onEdit}>
             Modifier
           </button>
@@ -195,7 +265,7 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '0' }}>
-        {(['tasks', 'members'] as Tab[]).map((t) => (
+        {(['tasks', 'scrum', 'members'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -212,7 +282,11 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
               transition: 'all 0.15s',
             }}
           >
-            {t === 'tasks' ? `Tâches (${tasks.length})` : `Membres (${members.length})`}
+            {t === 'tasks'
+              ? `Tâches (${tasks.length})`
+              : t === 'scrum'
+                ? 'Scrum'
+                : `Membres (${members.length})`}
           </button>
         ))}
       </div>
@@ -300,9 +374,76 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
         </div>
       )}
 
+      {tab === 'scrum' && (
+        <ScrumView
+          projectId={project.id}
+          token={token}
+          role={role}
+          members={members}
+          onTasksChanged={() => setTasksRefreshKey((value) => value + 1)}
+        />
+      )}
+
       {/* Members tab */}
       {tab === 'members' && (
         <div>
+          {showMemberModal ? (
+            <ProjectMemberModal
+              initial={{
+                projectId: project.id.toString(),
+                role: 'CONTRIBUTOR',
+                allocationPercentage: '100',
+              }}
+              onClose={() => setShowMemberModal(false)}
+              onSave={handleCreateMember}
+              projects={[{ id: project.id, name: project.name }]}
+              users={users.map((user) => ({
+                id: user.id,
+                name: `${user.firstName} ${user.lastName}`,
+                email: user.email,
+              }))}
+            />
+          ) : null}
+          {editingMember ? (
+            <ProjectMemberModal
+              mode="edit"
+              initial={{
+                projectId: project.id.toString(),
+                userId: editingMember.userId.toString(),
+                role: editingMember.role,
+                allocationPercentage: editingMember.allocationPercentage?.toString() ?? '0',
+              }}
+              onClose={() => setEditingMember(null)}
+              onSave={handleUpdateMember}
+              projects={[{ id: project.id, name: project.name }]}
+              users={users.map((user) => ({
+                id: user.id,
+                name: `${user.firstName} ${user.lastName}`,
+                email: user.email,
+              }))}
+            />
+          ) : null}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 800 }}>Membres du projet</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Les membres assignés ici deviennent disponibles comme assignees dans Scrum.
+              </div>
+            </div>
+            {canManage && (
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={membersLoading || users.length === 0}
+                onClick={() => setShowMemberModal(true)}
+                title={users.length === 0 ? 'Aucun utilisateur disponible' : 'Assigner un membre au projet'}
+              >
+                <UserPlus size={14} />
+                Assign member
+              </button>
+            )}
+          </div>
+
           {membersLoading ? (
             <div className="card"><div className="card-body" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Chargement…</div></div>
           ) : members.length === 0 ? (
@@ -341,14 +482,34 @@ export default function ProjectWorkspace({ project, token, role, onBack, onEdit 
                   >
                     {(m.firstName[0] + m.lastName[0]).toUpperCase()}
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '13px', fontWeight: 500 }}>{m.firstName} {m.lastName}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{m.userEmail}</div>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
                     <span className="badge b-gray" style={{ fontSize: '10px' }}>{m.role}</span>
                     {m.allocationPercentage !== null && (
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{m.allocationPercentage}%</span>
+                    )}
+                    {canManage && (
+                      <>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          title="Modifier l'affectation"
+                          onClick={() => setEditingMember(m)}
+                          style={{ width: '30px', height: '30px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          title="Retirer du projet"
+                          onClick={() => void handleDeleteMember(m)}
+                          style={{ width: '30px', height: '30px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', color: 'var(--accent3)' }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

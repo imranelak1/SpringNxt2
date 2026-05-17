@@ -35,8 +35,18 @@ public class TaskRequest {
     @Min(value = 0, message = "Actual hours must be at least 0")
     private Integer actualHours;
 
+    @Min(value = 0, message = "Story points must be at least 0")
+    private Integer storyPoints;
+
+    @Min(value = 0, message = "Backlog rank must be at least 0")
+    private Integer backlogRank;
+
+    private String acceptanceCriteria;
+
     @NotNull(message = "Project id is required")
     private Long projectId;
 
     private Long assigneeId;
+
+    private Long sprintId;
 }

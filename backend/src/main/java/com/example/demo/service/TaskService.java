@@ -5,11 +5,13 @@ import com.example.demo.dto.TaskResponse;
 import com.example.demo.dto.PagedResponse;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Project;
+import com.example.demo.model.Sprint;
 import com.example.demo.model.Task;
 import com.example.demo.model.TaskPriority;
 import com.example.demo.model.TaskStatus;
 import com.example.demo.model.User;
 import com.example.demo.repository.ProjectRepository;
+import com.example.demo.repository.SprintRepository;
 import com.example.demo.repository.TaskCommentRepository;
 import com.example.demo.repository.TaskRepository;
 import com.example.demo.repository.UserRepository;
@@ -22,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +35,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final TaskCommentRepository taskCommentRepository;
     private final ProjectRepository projectRepository;
+    private final SprintRepository sprintRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
@@ -42,6 +46,7 @@ public class TaskService {
 
         Project project = findProject(request.getProjectId());
         User assignee = findAssignee(request.getAssigneeId());
+        Sprint sprint = findSprint(request.getSprintId(), project.getId());
 
         Task task = Task.builder()
                 .title(request.getTitle())
@@ -52,9 +57,17 @@ public class TaskService {
                 .dueDate(request.getDueDate())
                 .estimatedHours(request.getEstimatedHours())
                 .actualHours(request.getActualHours())
+                .storyPoints(request.getStoryPoints())
+                .backlogRank(request.getBacklogRank())
+                .acceptanceCriteria(request.getAcceptanceCriteria())
                 .project(project)
+                .sprint(sprint)
                 .assignee(assignee)
                 .build();
+
+        if (task.getStatus() == TaskStatus.DONE) {
+            task.setCompletedAt(LocalDateTime.now());
+        }
 
         TaskResponse response = mapToResponse(taskRepository.save(task));
 
@@ -153,6 +166,7 @@ public class TaskService {
 
         Project project = findProject(request.getProjectId());
         User newAssignee = findAssignee(request.getAssigneeId());
+        Sprint sprint = findSprint(request.getSprintId(), project.getId());
         TaskStatus newStatus = request.getStatus() != null ? request.getStatus() : task.getStatus();
 
         task.setTitle(request.getTitle());
@@ -163,8 +177,18 @@ public class TaskService {
         task.setDueDate(request.getDueDate());
         task.setEstimatedHours(request.getEstimatedHours());
         task.setActualHours(request.getActualHours());
+        task.setStoryPoints(request.getStoryPoints() != null ? request.getStoryPoints() : task.getStoryPoints());
+        task.setBacklogRank(request.getBacklogRank());
+        task.setAcceptanceCriteria(request.getAcceptanceCriteria());
         task.setProject(project);
+        task.setSprint(sprint);
         task.setAssignee(newAssignee);
+
+        if (oldStatus != TaskStatus.DONE && newStatus == TaskStatus.DONE) {
+            task.setCompletedAt(LocalDateTime.now());
+        } else if (oldStatus == TaskStatus.DONE && newStatus != TaskStatus.DONE) {
+            task.setCompletedAt(null);
+        }
 
         TaskResponse response = mapToResponse(taskRepository.save(task));
 
@@ -232,6 +256,19 @@ public class TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + assigneeId));
     }
 
+    private Sprint findSprint(Long sprintId, Long projectId) {
+        if (sprintId == null) {
+            return null;
+        }
+
+        Sprint sprint = sprintRepository.findById(sprintId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found with id: " + sprintId));
+        if (!sprint.getProject().getId().equals(projectId)) {
+            throw new IllegalArgumentException("Sprint does not belong to the selected project");
+        }
+        return sprint;
+    }
+
     private void validateDates(TaskRequest request) {
         if (request.getStartDate() != null
                 && request.getDueDate() != null
@@ -251,9 +288,15 @@ public class TaskService {
                 .dueDate(task.getDueDate())
                 .estimatedHours(task.getEstimatedHours())
                 .actualHours(task.getActualHours())
+                .storyPoints(task.getStoryPoints())
+                .backlogRank(task.getBacklogRank())
+                .acceptanceCriteria(task.getAcceptanceCriteria())
                 .createdAt(task.getCreatedAt())
+                .completedAt(task.getCompletedAt())
                 .projectId(task.getProject().getId())
                 .projectName(task.getProject().getName())
+                .sprintId(task.getSprint() != null ? task.getSprint().getId() : null)
+                .sprintName(task.getSprint() != null ? task.getSprint().getName() : null)
                 .assigneeId(task.getAssignee() != null ? task.getAssignee().getId() : null)
                 .assigneeEmail(task.getAssignee() != null ? task.getAssignee().getEmail() : null)
                 .build();

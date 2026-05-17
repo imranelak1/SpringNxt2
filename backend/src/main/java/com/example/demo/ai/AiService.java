@@ -4,9 +4,7 @@ import com.example.demo.dto.AiChatResponse;
 import com.example.demo.dto.AiInsightsResponse;
 import com.example.demo.dto.ProjectSimulationRequest;
 import com.example.demo.dto.ProjectSimulationResponse;
-import com.example.demo.model.Project;
 import com.example.demo.model.Role;
-import com.example.demo.repository.ProjectRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,17 +24,15 @@ public class AiService {
 
     private final LlmClient llmClient;
     private final AiContextBuilder contextBuilder;
-    private final ProjectRepository projectRepository;
     private final ObjectMapper objectMapper;
 
     private static final String SYSTEM_BASE = """
-            Tu es NEXUS-IA, l'assistant intelligent du système de gestion de projets NEXUS.
-            Tu analyses les données réelles du projet et fournis des insights précis, des recommandations
-            et des réponses contextualisées. Réponds toujours en français, de façon concise et professionnelle.
-            Ne fais jamais référence au fait que tu es une IA ou un LLM — parle simplement en tant qu'assistant NEXUS.
+            Tu es NEXUS-IA, assistant d'analyse projet de SpringNxt.
+            Tu utilises uniquement les donnees fournies dans le contexte.
+            Chaque reponse doit citer des chiffres, projets, taches ou signaux presents dans le contexte quand c'est possible.
+            Si les donnees sont insuffisantes, dis clairement ce qui manque au lieu d'inventer.
+            Reponds en francais, avec un style direct, operationnel et non generique.
             """;
-
-    // ── Chat (assistant conversationnel) ────────────────────────────────────
 
     public AiChatResponse ask(String question, String userEmail, Role userRole) {
         if (!llmClient.isConfigured()) {
@@ -44,16 +40,25 @@ public class AiService {
         }
         try {
             String context = contextBuilder.build(userEmail, userRole);
-            String system = SYSTEM_BASE + "\n\nDonnées du projet en temps réel :\n" + context;
-            String answer = llmClient.complete(system, question);
+            String system = SYSTEM_BASE + "\n\nCONTEXTE TEMPS REEL:\n" + context;
+            String prompt = """
+                    QUESTION UTILISATEUR:
+                    %s
+
+                    CONSIGNES:
+                    - Appuie la reponse sur les projets, taches, budgets et signaux calcules du contexte.
+                    - Priorise les anomalies concretes: retard, blocage, budget, taches critiques, echeances proches.
+                    - Termine par 1 a 3 actions recommandees si la question appelle une decision.
+                    - Ne donne pas de conseil generique sans lien avec les donnees.
+                    """.formatted(question);
+
+            String answer = llmClient.complete(system, prompt, 900);
             return new AiChatResponse(answer, true);
         } catch (Exception e) {
             log.error("AI ask failed: {}", e.getMessage());
-            return new AiChatResponse("Désolé, une erreur s'est produite. Réessayez dans un instant.", false);
+            return new AiChatResponse("Desole, une erreur s'est produite. Reessayez dans un instant.", false);
         }
     }
-
-    // ── Insights (tableau de bord, rapports) ────────────────────────────────
 
     public AiInsightsResponse getInsights(String userEmail, Role userRole) {
         if (!llmClient.isConfigured()) {
@@ -61,18 +66,23 @@ public class AiService {
         }
         try {
             String context = contextBuilder.build(userEmail, userRole);
-            String system = SYSTEM_BASE;
             String prompt = """
-                    Voici les données actuelles du portfolio de projets :
+                    CONTEXTE PORTEFEUILLE:
 
                     %s
 
-                    Génère exactement 4 insights pertinents sur l'état du portfolio.
-                    Chaque insight doit être une phrase courte (max 2 lignes), factuelle, basée sur les données.
-                    Retourne uniquement les 4 insights, un par ligne, sans numérotation ni tirets.
+                    Genere exactement 4 insights dynamiques pour le dashboard.
+
+                    Regles strictes:
+                    - Une seule ligne par insight, sans numerotation ni tiret initial.
+                    - Chaque ligne doit suivre ce format: PRIORITE - constat chiffre -> action concrete.
+                    - PRIORITE doit etre CRITIQUE, ATTENTION, OPPORTUNITE ou OK.
+                    - Cite au moins un projet, une tache, un pourcentage, un montant ou un compteur par ligne.
+                    - Evite les phrases generiques comme "surveiller les projets" sans signal precis.
+                    - Ne repete pas deux fois le meme angle d'analyse.
                     """.formatted(context);
 
-            String raw = llmClient.complete(system, prompt, 512);
+            String raw = llmClient.complete(SYSTEM_BASE, prompt, 700);
             List<String> insights = Arrays.stream(raw.split("\n"))
                     .map(String::trim)
                     .filter(s -> !s.isBlank())
@@ -85,64 +95,62 @@ public class AiService {
         }
     }
 
-    // ── Task decomposition ───────────────────────────────────────────────────
-
     public AiChatResponse decomposeTasks(String goal, Long projectId, String userEmail, Role userRole) {
         if (!llmClient.isConfigured()) {
             return new AiChatResponse(fallbackUnavailable(), false);
         }
         try {
-            String projectContext = "";
-            if (projectId != null) {
-                projectContext = projectRepository.findById(projectId)
-                        .map(p -> "Projet cible : " + p.getName() + " (" + p.getStatus() + ", " + p.getProgressPercentage() + "% avancement)\n")
-                        .orElse("");
-            }
+            String context = projectId != null
+                    ? contextBuilder.buildProject(projectId, userEmail, userRole)
+                    : contextBuilder.build(userEmail, userRole);
 
-            String system = SYSTEM_BASE;
             String prompt = """
+                    CONTEXTE:
                     %s
-                    L'utilisateur souhaite décomposer cet objectif en tâches concrètes :
+
+                    OBJECTIF A DECOMPOSER:
                     "%s"
 
-                    Génère une liste de 4 à 8 tâches actionables pour atteindre cet objectif.
-                    Chaque tâche doit être sur une ligne séparée, sous forme de titre court et clair (max 80 caractères).
-                    Retourne uniquement les tâches, une par ligne, sans numérotation ni tirets.
-                    """.formatted(projectContext, goal);
+                    Genere une liste de 4 a 8 titres de taches actionnables.
+                    Les taches doivent tenir compte du contexte reel: statut du projet, taches bloquees, echeances, priorites et charge si disponibles.
+                    Chaque ligne doit contenir uniquement le titre de la tache, max 80 caracteres, sans numerotation ni tiret initial.
+                    """.formatted(context, goal);
 
-            String raw = llmClient.complete(system, prompt, 512);
+            String raw = llmClient.complete(SYSTEM_BASE, prompt, 650);
             return new AiChatResponse(raw.trim(), true);
         } catch (Exception e) {
             log.error("AI decompose failed: {}", e.getMessage());
-            return new AiChatResponse("Impossible de décomposer l'objectif pour le moment. Réessayez.", false);
+            return new AiChatResponse("Impossible de decomposer l'objectif pour le moment. Reessayez.", false);
         }
     }
-
-    // ── Project risk analysis ────────────────────────────────────────────────
 
     public AiChatResponse analyzeRisk(Long projectId, String userEmail, Role userRole) {
         if (!llmClient.isConfigured()) {
             return new AiChatResponse(fallbackUnavailable(), false);
         }
         try {
-            Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new IllegalArgumentException("Project not found"));
-
-            String context = contextBuilder.build(userEmail, userRole);
-            String system = SYSTEM_BASE;
+            String context = contextBuilder.buildProject(projectId, userEmail, userRole);
             String prompt = """
-                    Voici les données du portfolio :
+                    CONTEXTE PROJET:
                     %s
 
-                    Analyse le risque spécifique au projet "%s" et fournis :
-                    1. Le niveau de risque global (Faible / Moyen / Élevé / Critique)
-                    2. Les 3 principaux facteurs de risque identifiés
-                    3. Une recommandation concrète pour mitiger le risque principal
+                    Produis une analyse de risque specifique au PROJET CIBLE.
 
-                    Sois direct et factuel. Réponds en français.
-                    """.formatted(context, project.getName());
+                    Format attendu:
+                    Niveau global: Faible/Moyen/Eleve/Critique - justification en une phrase avec chiffres.
+                    Facteurs:
+                    1. Cause precise -> impact probable -> action recommandee.
+                    2. Cause precise -> impact probable -> action recommandee.
+                    3. Cause precise -> impact probable -> action recommandee.
+                    Decision manager: une action prioritaire pour les prochaines 24-48h.
 
-            String raw = llmClient.complete(system, prompt, 768);
+                    Contraintes:
+                    - Cite explicitement les signaux fournis: score risque, retard, taches bloquees, budget, health score ou echeances.
+                    - Si aucun risque fort n'apparait, explique pourquoi et propose une optimisation concrete.
+                    - N'ajoute pas d'informations absentes du contexte.
+                    """.formatted(context);
+
+            String raw = llmClient.complete(SYSTEM_BASE, prompt, 1100);
             return new AiChatResponse(raw.trim(), true);
         } catch (Exception e) {
             log.error("AI risk analysis failed: {}", e.getMessage());
@@ -150,30 +158,33 @@ public class AiService {
         }
     }
 
-    // ── Project simulation ───────────────────────────────────────────────────
-
     public ProjectSimulationResponse simulateProject(ProjectSimulationRequest request) {
         if (!llmClient.isConfigured()) {
             throw new IllegalStateException("GROQ_API_KEY is not configured.");
         }
 
-        String budgetStr = request.getBudget() != null ? request.getBudget().toPlainString() + " MAD" : "non spécifié";
-        String durationStr = request.getDuration() != null ? request.getDuration() : "non spécifié";
-        String teamStr = request.getTeamSize() != null ? request.getTeamSize() + " personnes" : "non spécifié";
+        String budgetStr = request.getBudget() != null ? request.getBudget().toPlainString() + " MAD" : "non specifie";
+        String durationStr = request.getDuration() != null ? request.getDuration() : "non specifie";
+        String teamStr = request.getTeamSize() != null ? request.getTeamSize() + " personnes" : "non specifie";
 
         String system = """
-                Tu es un expert en gestion de projet avec 20 ans d'expérience.
-                Tu dois simuler un plan de projet complet et réaliste basé sur la description de l'utilisateur.
-                Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans explication, sans commentaires.
+                Tu es un expert senior en gestion de projet.
+                Tu dois simuler un plan realiste, adapte au domaine decrit par l'utilisateur et aux contraintes donnees.
+                Reponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans explication, sans commentaires.
                 """;
 
         String prompt = """
-                Simule un plan de projet complet pour la description suivante :
+                Simule un plan de projet complet pour la description suivante:
                 "%s"
 
-                Contraintes : budget=%s | durée=%s | équipe=%s
+                Contraintes: budget=%s | duree=%s | equipe=%s
 
-                Retourne EXACTEMENT ce JSON (sans aucun texte avant ou après) :
+                Consignes de realisme:
+                - Adapte les phases, roles, risques et budget au domaine du projet.
+                - Si une contrainte est faible ou incoherente, baisse la confidence et ajoute un risque explicite.
+                - Les risques doivent etre specifiques, pas generiques.
+
+                Retourne EXACTEMENT ce JSON:
                 {
                   "projectName": "string",
                   "description": "string (2-3 phrases concises)",
@@ -207,13 +218,12 @@ public class AiService {
             String json = extractJson(raw);
             JsonNode root = objectMapper.readTree(json);
 
-            // Phases
             List<ProjectSimulationResponse.SimPhase> phases = new ArrayList<>();
             for (JsonNode p : iterArray(root.path("phases"))) {
                 List<ProjectSimulationResponse.SimTask> tasks = new ArrayList<>();
                 for (JsonNode t : iterArray(p.path("tasks"))) {
                     tasks.add(ProjectSimulationResponse.SimTask.builder()
-                            .title(t.path("title").asText("Tâche"))
+                            .title(t.path("title").asText("Tache"))
                             .priority(t.path("priority").asText("MEDIUM"))
                             .estimatedHours(t.path("estimatedHours").asInt(8))
                             .role(t.path("role").asText(""))
@@ -226,7 +236,6 @@ public class AiService {
                         .build());
             }
 
-            // Budget breakdown
             List<ProjectSimulationResponse.SimBudgetItem> budgetItems = new ArrayList<>();
             for (JsonNode b : iterArray(root.path("budgetBreakdown"))) {
                 budgetItems.add(ProjectSimulationResponse.SimBudgetItem.builder()
@@ -236,7 +245,6 @@ public class AiService {
                         .build());
             }
 
-            // Team roles
             List<ProjectSimulationResponse.SimTeamRole> teamRoles = new ArrayList<>();
             for (JsonNode r : iterArray(root.path("teamRoles"))) {
                 teamRoles.add(ProjectSimulationResponse.SimTeamRole.builder()
@@ -246,7 +254,6 @@ public class AiService {
                         .build());
             }
 
-            // Risks
             List<ProjectSimulationResponse.SimRisk> risks = new ArrayList<>();
             for (JsonNode r : iterArray(root.path("risks"))) {
                 risks.add(ProjectSimulationResponse.SimRisk.builder()
@@ -256,7 +263,6 @@ public class AiService {
                         .build());
             }
 
-            // Key insights
             List<String> insights = new ArrayList<>();
             for (JsonNode i : iterArray(root.path("keyInsights"))) {
                 insights.add(i.asText(""));
@@ -267,7 +273,7 @@ public class AiService {
                     : safeDecimal(root.path("totalBudget"));
 
             return ProjectSimulationResponse.builder()
-                    .projectName(root.path("projectName").asText("Projet simulé"))
+                    .projectName(root.path("projectName").asText("Projet simule"))
                     .description(root.path("description").asText(""))
                     .estimatedWeeks(root.path("estimatedWeeks").asInt(8))
                     .totalBudget(totalBudget)
@@ -281,7 +287,7 @@ public class AiService {
 
         } catch (Exception e) {
             log.error("Project simulation failed", e);
-            throw new IllegalStateException("La simulation a échoué : " + e.getMessage(), e);
+            throw new IllegalStateException("La simulation a echoue: " + e.getMessage(), e);
         }
     }
 
@@ -303,21 +309,23 @@ public class AiService {
 
     private BigDecimal safeDecimal(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) return BigDecimal.ZERO;
-        try { return new BigDecimal(node.asText("0")); } catch (NumberFormatException e) { return BigDecimal.ZERO; }
+        try {
+            return new BigDecimal(node.asText("0"));
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
     }
 
-    // ── Fallbacks ────────────────────────────────────────────────────────────
-
     private String fallbackUnavailable() {
-        return "L'assistant IA n'est pas disponible. Configurez la variable d'environnement GROQ_API_KEY et redémarrez le backend.";
+        return "L'assistant IA n'est pas disponible. Configurez la variable d'environnement GROQ_API_KEY et redemarrez le backend.";
     }
 
     private List<String> fallbackInsights() {
         return List.of(
-                "Configurez GROQ_API_KEY pour activer les insights IA en temps réel.",
-                "Une fois configuré, NEXUS-IA analysera automatiquement vos projets et budgets.",
-                "L'assistant conversationnel sera disponible pour répondre à vos questions métier.",
-                "La décomposition automatique de tâches sera également activée."
+                "Configurez GROQ_API_KEY pour activer les insights IA en temps reel.",
+                "Une fois configure, NEXUS-IA analysera automatiquement vos projets, taches, budgets et echeances.",
+                "Les analyses de risque exploiteront les retards, blocages, taches critiques et scores de sante.",
+                "La decomposition de taches tiendra compte du projet cible et de ses contraintes."
         );
     }
 }

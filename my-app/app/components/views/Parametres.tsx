@@ -62,7 +62,7 @@ export default function Parametres({ token, email, role, firstName, lastName, on
         customClass: {
           popup: 'swal-popup',
           title: 'swal-title',
-          content: 'swal-content',
+          htmlContainer: 'swal-content',
           confirmButton: 'swal-confirm-btn',
         },
       });
@@ -85,7 +85,7 @@ export default function Parametres({ token, email, role, firstName, lastName, on
         customClass: {
           popup: 'swal-popup',
           title: 'swal-title',
-          content: 'swal-content',
+          htmlContainer: 'swal-content',
         },
       });
     } catch (err) {
@@ -100,7 +100,7 @@ export default function Parametres({ token, email, role, firstName, lastName, on
         customClass: {
           popup: 'swal-popup',
           title: 'swal-title',
-          content: 'swal-content',
+          htmlContainer: 'swal-content',
           confirmButton: 'swal-confirm-btn',
         },
       });

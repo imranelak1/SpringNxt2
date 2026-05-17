@@ -92,9 +92,15 @@ export interface Task {
   dueDate: string | null;
   estimatedHours: number | null;
   actualHours: number | null;
+  storyPoints: number | null;
+  backlogRank: number | null;
+  acceptanceCriteria: string | null;
   createdAt: string;
+  completedAt: string | null;
   projectId: number | null;
   projectName: string | null;
+  sprintId: number | null;
+  sprintName: string | null;
   assigneeId: number | null;
   assigneeEmail: string | null;
 }
@@ -201,8 +207,82 @@ export interface CreateTaskInput {
   dueDate: string | null;
   estimatedHours: number | null;
   actualHours: number | null;
+  storyPoints?: number | null;
+  backlogRank?: number | null;
+  acceptanceCriteria?: string | null;
   projectId: number;
   assigneeId: number | null;
+  sprintId?: number | null;
+}
+
+export interface Sprint {
+  id: number;
+  projectId: number;
+  projectName: string;
+  name: string;
+  goal: string | null;
+  startDate: string;
+  endDate: string;
+  status: 'PLANNED' | 'ACTIVE' | 'CLOSED';
+  capacityPoints: number;
+  committedPoints: number;
+  completedPoints: number;
+  remainingPoints: number;
+  taskCount: number;
+  doneTaskCount: number;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export interface SprintInput {
+  name: string;
+  goal: string;
+  startDate: string;
+  endDate: string;
+  capacityPoints: number;
+}
+
+export interface BurndownPoint {
+  date: string;
+  idealRemainingPoints: number;
+  actualRemainingPoints: number | null;
+}
+
+export interface VelocityPoint {
+  sprintId: number;
+  sprintName: string;
+  committedPoints: number;
+  completedPoints: number;
+}
+
+export interface ScrumMetrics {
+  backlogItems: number;
+  backlogPoints: number;
+  activeCommittedPoints: number;
+  activeCompletedPoints: number;
+  activeRemainingPoints: number;
+  activeBlockedItems: number;
+  activeCapacityPoints: number;
+  averageVelocity: number;
+}
+
+export interface ScrumBoard {
+  projectId: number;
+  projectName: string;
+  activeSprint: Sprint | null;
+  plannedSprints: Sprint[];
+  closedSprints: Sprint[];
+  backlog: Task[];
+  activeSprintTasks: Task[];
+  burndown: BurndownPoint[];
+  velocity: VelocityPoint[];
+  metrics: ScrumMetrics;
+}
+
+export interface TaskScrumInput {
+  storyPoints?: number | null;
+  backlogRank?: number | null;
+  acceptanceCriteria?: string | null;
 }
 
 export interface CreateUserInput {

@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task> {
     List<Task> findByProjectId(Long projectId);
+    List<Task> findByProjectIdOrderByBacklogRankAscIdAsc(Long projectId);
+    List<Task> findBySprintIdOrderByBacklogRankAscIdAsc(Long sprintId);
 }

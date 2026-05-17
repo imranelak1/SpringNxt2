@@ -23,9 +23,15 @@ public class TaskResponse {
     private LocalDate dueDate;
     private Integer estimatedHours;
     private Integer actualHours;
+    private Integer storyPoints;
+    private Integer backlogRank;
+    private String acceptanceCriteria;
     private LocalDateTime createdAt;
+    private LocalDateTime completedAt;
     private Long projectId;
     private String projectName;
+    private Long sprintId;
+    private String sprintName;
     private Long assigneeId;
     private String assigneeEmail;
 }

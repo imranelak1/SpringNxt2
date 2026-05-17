@@ -41,9 +41,20 @@ public class Task {
 
     private Integer actualHours;
 
+    private Integer storyPoints;
+
+    private Integer backlogRank;
+
+    @Column(length = 2000)
+    private String acceptanceCriteria;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sprint_id")
+    private Sprint sprint;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")
@@ -51,6 +62,8 @@ public class Task {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    private LocalDateTime completedAt;
 
     @PrePersist
     protected void onCreate() {
@@ -60,6 +73,12 @@ public class Task {
         }
         if (this.priority == null) {
             this.priority = TaskPriority.MEDIUM;
+        }
+        if (this.storyPoints == null) {
+            this.storyPoints = 0;
+        }
+        if (this.status == TaskStatus.DONE && this.completedAt == null) {
+            this.completedAt = LocalDateTime.now();
         }
     }
 }

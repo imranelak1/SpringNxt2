@@ -23,19 +23,26 @@ public class ScrumService {
     private final ProjectRepository projectRepository;
     private final SprintRepository sprintRepository;
     private final TaskRepository taskRepository;
+    private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
     public ScrumBoardResponse getBoard(Long projectId) {
         Project project = findProject(projectId);
+        User currentUser = currentUserService.getCurrentUser();
+        currentUserService.requireCanViewProject(project);
+        boolean canManage = currentUserService.canManage(currentUser);
         Sprint activeSprint = sprintRepository.findFirstByProjectIdAndStatus(projectId, SprintStatus.ACTIVE).orElse(null);
         List<Sprint> plannedSprints = sprintRepository.findByProjectIdAndStatusOrderByStartDateDescIdDesc(projectId, SprintStatus.PLANNED);
         List<Sprint> closedSprints = sprintRepository.findByProjectIdAndStatusOrderByStartDateDescIdDesc(projectId, SprintStatus.CLOSED);
         List<Task> backlog = taskRepository.findByProjectIdOrderByBacklogRankAscIdAsc(projectId).stream()
                 .filter(task -> task.getSprint() == null)
+                .filter(task -> canManage || isAssignedTo(task, currentUser))
                 .toList();
         List<Task> activeTasks = activeSprint == null
                 ? List.of()
-                : taskRepository.findBySprintIdOrderByBacklogRankAscIdAsc(activeSprint.getId());
+                : taskRepository.findBySprintIdOrderByBacklogRankAscIdAsc(activeSprint.getId()).stream()
+                        .filter(task -> canManage || isAssignedTo(task, currentUser))
+                        .toList();
 
         return ScrumBoardResponse.builder()
                 .projectId(project.getId())
@@ -298,6 +305,10 @@ public class ScrumService {
     private Task findTask(Long taskId) {
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + taskId));
+    }
+
+    private boolean isAssignedTo(Task task, User user) {
+        return task.getAssignee() != null && task.getAssignee().getId().equals(user.getId());
     }
 
     private void validateSprintRequest(SprintRequest request) {

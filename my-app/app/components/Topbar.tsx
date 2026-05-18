@@ -8,6 +8,7 @@ const titles: Record<View, string> = {
   dashboard: 'Tableau de bord',
   projets: 'Projets',
   taches: 'Taches',
+  scrum: 'Mon sprint',
   calendrier: 'Calendar',
   ressources: 'Resources',
   rapports: 'Rapports IA',
@@ -26,6 +27,7 @@ const searchItems: { view: View; label: string; group: string; keywords: string 
   { view: 'dashboard', label: 'Tableau de bord', group: 'General', keywords: 'dashboard accueil statistiques synthese' },
   { view: 'projets', label: 'Projets', group: 'General', keywords: 'portfolio projet planning client' },
   { view: 'taches', label: 'Taches', group: 'General', keywords: 'tasks kanban todo priorite' },
+  { view: 'scrum', label: 'Mon sprint', group: 'General', keywords: 'scrum sprint backlog points daily' },
   { view: 'gantt', label: 'Vue Gantt', group: 'General', keywords: 'planning timeline calendrier' },
   { view: 'calendrier', label: 'Calendrier', group: 'General', keywords: 'date evenement meeting deadline' },
   { view: 'ressources', label: 'Ressources', group: 'Gestion', keywords: 'equipe allocation utilisateurs charge' },
@@ -39,6 +41,16 @@ const searchItems: { view: View; label: string; group: string; keywords: string 
   { view: 'notifications', label: 'Notifications', group: 'Administration', keywords: 'alertes messages' },
   { view: 'parametres', label: 'Parametres', group: 'Administration', keywords: 'settings profil configuration' },
 ];
+
+const managerSearchViews = searchItems
+  .map((item) => item.view)
+  .filter((view) => view !== 'scrum');
+
+const allowedViewsByRole: Record<AppRole, View[]> = {
+  admin: managerSearchViews,
+  pm: managerSearchViews,
+  employee: ['dashboard', 'taches', 'scrum', 'calendrier', 'archives-ia', 'notifications', 'parametres'],
+};
 
 interface TopbarProps {
   activeView: View;
@@ -63,10 +75,12 @@ export default function Topbar({ activeView, onNavigate, onLogout, role, theme, 
       return [];
     }
 
+    const allowedViews = new Set(allowedViewsByRole[role]);
     return searchItems
+      .filter((item) => allowedViews.has(item.view))
       .filter((item) => `${item.label} ${item.group} ${item.keywords}`.toLowerCase().includes(term))
       .slice(0, 6);
-  }, [query]);
+  }, [query, role]);
 
   const goToResult = (view: View) => {
     onNavigate(view);
@@ -76,7 +90,7 @@ export default function Topbar({ activeView, onNavigate, onLogout, role, theme, 
 
   return (
     <div className="topbar">
-      <div className="page-title">{titles[activeView]}</div>
+      <div className="page-title" data-testid="page-title">{titles[activeView]}</div>
       <span
         style={{
           fontSize: '11px',
@@ -139,15 +153,16 @@ export default function Topbar({ activeView, onNavigate, onLogout, role, theme, 
         <div className="icon-btn" onClick={onToggleTheme} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
           {theme === 'dark' ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
         </div>
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => onNavigate(role === 'employee' ? 'taches' : 'projets')}
-          disabled={role === 'employee'}
-          title={role === 'employee' ? 'Reserved for admin/manager roles' : 'Create project'}
-        >
-          <Plus size={13} strokeWidth={2.5} />
-          Nouveau
-        </button>
+        {role !== 'employee' ? (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => onNavigate('projets')}
+            title="Create project"
+          >
+            <Plus size={13} strokeWidth={2.5} />
+            Nouveau
+          </button>
+        ) : null}
         <div className="icon-btn" onClick={onLogout} title="Deconnexion">
           <LogOut size={15} strokeWidth={1.8} />
         </div>

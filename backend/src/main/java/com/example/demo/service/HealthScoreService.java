@@ -9,6 +9,7 @@ import com.example.demo.model.Project;
 import com.example.demo.model.ProjectStatus;
 import com.example.demo.model.Task;
 import com.example.demo.model.TaskStatus;
+import com.example.demo.model.User;
 import com.example.demo.repository.HealthScoreRepository;
 import com.example.demo.repository.ProjectRepository;
 import com.example.demo.repository.TaskRepository;
@@ -28,11 +29,13 @@ public class HealthScoreService {
     private final TaskRepository taskRepository;
     private final HealthScoreRepository healthScoreRepository;
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @Transactional
     public HealthScoreResponse calculateProjectHealth(Long projectId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
+        currentUserService.requireCanViewProject(project);
 
         List<Task> tasks = taskRepository.findByProjectId(projectId);
 
@@ -69,12 +72,24 @@ public class HealthScoreService {
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard() {
-        List<Project> projects = projectRepository.findAll();
-        List<Task> tasks = taskRepository.findAll();
+        User currentUser = currentUserService.getCurrentUser();
+        boolean canManage = currentUserService.canManage(currentUser);
+        List<Project> projects = canManage ? projectRepository.findAll() : currentUserService.visibleProjects(currentUser);
+        List<Task> tasks = canManage
+                ? taskRepository.findAll()
+                : projects.stream()
+                        .flatMap(project -> taskRepository.findByProjectId(project.getId()).stream())
+                        .filter(task -> task.getAssignee() != null && task.getAssignee().getId().equals(currentUser.getId()))
+                        .toList();
 
         List<DashboardProjectSummaryResponse> projectSummaries = projects.stream()
                 .map(project -> {
                     List<Task> projectTasks = taskRepository.findByProjectId(project.getId());
+                    if (!canManage) {
+                        projectTasks = projectTasks.stream()
+                                .filter(task -> task.getAssignee() != null && task.getAssignee().getId().equals(currentUser.getId()))
+                                .toList();
+                    }
                     int completedProjectTasks = (int) projectTasks.stream()
                             .filter(task -> task.getStatus() == TaskStatus.DONE)
                             .count();
@@ -108,7 +123,7 @@ public class HealthScoreService {
                 .activeProjects(activeProjects)
                 .totalTasks(tasks.size())
                 .completedTasks(completedTasks)
-                .totalUsers((int) userRepository.count())
+                .totalUsers(canManage ? (int) userRepository.count() : 1)
                 .projects(projectSummaries)
                 .build();
     }

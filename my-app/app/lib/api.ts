@@ -133,10 +133,10 @@ export function getDashboard(token: string) {
   return request<DashboardResponse>('/api/dashboard', {}, token);
 }
 
-export function getProjects(token: string, search?: string, status?: string) {
+export function getProjects(token: string, search?: string, status?: string, size = 12) {
   const params = new URLSearchParams({
     page: '0',
-    size: '12',
+    size: String(size),
     sortBy: 'createdAt',
     sortDir: 'desc',
   });

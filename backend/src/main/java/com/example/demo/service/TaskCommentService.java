@@ -27,10 +27,12 @@ public class TaskCommentService {
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final EmailService emailService;
+    private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
     public List<TaskCommentResponse> getByTaskId(Long taskId) {
-        ensureTaskExists(taskId);
+        Task task = findTask(taskId);
+        currentUserService.requireCanViewTask(task);
         return taskCommentRepository.findByTaskIdOrderByCreatedAtDesc(taskId)
                 .stream()
                 .map(this::mapToResponse)
@@ -41,6 +43,7 @@ public class TaskCommentService {
     public TaskCommentResponse addComment(Long taskId, TaskCommentRequest request, String authorEmail) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + taskId));
+        currentUserService.requireCanViewTask(task);
 
         User author = userRepository.findByEmail(authorEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + authorEmail));
@@ -80,10 +83,9 @@ public class TaskCommentService {
                 commentText));
     }
 
-    private void ensureTaskExists(Long taskId) {
-        if (!taskRepository.existsById(taskId)) {
-            throw new ResourceNotFoundException("Task not found with id: " + taskId);
-        }
+    private Task findTask(Long taskId) {
+        return taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + taskId));
     }
 
     private TaskCommentResponse mapToResponse(TaskComment comment) {

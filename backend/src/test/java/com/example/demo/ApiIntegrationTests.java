@@ -2,19 +2,32 @@ package com.example.demo;
 
 import com.example.demo.dto.ProjectMemberRequest;
 import com.example.demo.dto.ProjectRequest;
+import com.example.demo.dto.SprintRequest;
 import com.example.demo.dto.TaskRequest;
+import com.example.demo.dto.TaskScrumUpdateRequest;
 import com.example.demo.model.AuthProvider;
 import com.example.demo.model.Project;
+import com.example.demo.model.ProjectMember;
+import com.example.demo.model.ProjectMemberRole;
 import com.example.demo.model.ProjectStatus;
 import com.example.demo.model.Role;
+import com.example.demo.model.Sprint;
+import com.example.demo.model.SprintStatus;
 import com.example.demo.model.Task;
 import com.example.demo.model.TaskPriority;
 import com.example.demo.model.TaskStatus;
 import com.example.demo.model.User;
 import com.example.demo.repository.ProjectMemberRepository;
 import com.example.demo.repository.ProjectRepository;
+import com.example.demo.repository.SprintRepository;
 import com.example.demo.repository.TaskRepository;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.CalendarEventRepository;
+import com.example.demo.repository.HealthScoreRepository;
+import com.example.demo.repository.NotificationRepository;
+import com.example.demo.repository.PasswordResetTokenRepository;
+import com.example.demo.repository.TaskCommentRepository;
+import com.example.demo.repository.VerificationTokenRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,13 +70,41 @@ class ApiIntegrationTests {
     @Autowired
     private ProjectMemberRepository projectMemberRepository;
 
+    @Autowired
+    private SprintRepository sprintRepository;
+
+    @Autowired
+    private TaskCommentRepository taskCommentRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private HealthScoreRepository healthScoreRepository;
+
+    @Autowired
+    private CalendarEventRepository calendarEventRepository;
+
+    @Autowired
+    private VerificationTokenRepository verificationTokenRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
     private Project project;
     private User user;
 
     @BeforeEach
     void setUp() {
+        taskCommentRepository.deleteAll();
+        notificationRepository.deleteAll();
+        healthScoreRepository.deleteAll();
+        calendarEventRepository.deleteAll();
+        verificationTokenRepository.deleteAll();
+        passwordResetTokenRepository.deleteAll();
         projectMemberRepository.deleteAll();
         taskRepository.deleteAll();
+        sprintRepository.deleteAll();
         projectRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -89,7 +130,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void createProject_shouldReturnCreatedProject() throws Exception {
         ProjectRequest request = ProjectRequest.builder()
                 .name("Platform Revamp")
@@ -111,7 +152,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void createProject_shouldRejectInvalidProgress() throws Exception {
         ProjectRequest request = ProjectRequest.builder()
                 .name("Broken Project")
@@ -126,7 +167,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void updateProject_shouldPersistChanges() throws Exception {
         ProjectRequest request = ProjectRequest.builder()
                 .name("Updated Project")
@@ -148,7 +189,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void getProjects_shouldFilterBySearchAndStatus() throws Exception {
         projectRepository.save(Project.builder()
                 .name("Archived Initiative")
@@ -166,7 +207,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void getProjects_shouldPaginateAndSort() throws Exception {
         projectRepository.save(Project.builder()
                 .name("Beta Project")
@@ -194,7 +235,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void deleteProject_shouldRemoveProject() throws Exception {
         mockMvc.perform(delete("/api/projects/{id}", project.getId()))
                 .andExpect(status().isNoContent());
@@ -204,7 +245,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void createTask_shouldAttachTaskToProject() throws Exception {
         TaskRequest request = TaskRequest.builder()
                 .title("Implement API")
@@ -229,7 +270,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void createTask_shouldRejectInvalidDates() throws Exception {
         TaskRequest request = TaskRequest.builder()
                 .title("Invalid Task")
@@ -246,7 +287,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void updateTask_shouldPersistChanges() throws Exception {
         Task savedTask = taskRepository.save(Task.builder()
                 .title("Original Task")
@@ -280,7 +321,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void getTasks_shouldFilterByProjectStatusPriorityAndSearch() throws Exception {
         taskRepository.save(Task.builder()
                 .title("API Searchable Task")
@@ -311,7 +352,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void getTasks_shouldPaginateAndSort() throws Exception {
         taskRepository.save(Task.builder()
                 .title("Zulu Task")
@@ -343,7 +384,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void deleteTask_shouldRemoveTask() throws Exception {
         Task savedTask = taskRepository.save(Task.builder()
                 .title("Delete Me")
@@ -362,7 +403,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void addProjectMember_shouldReturnCreatedMembership() throws Exception {
         ProjectMemberRequest request = ProjectMemberRequest.builder()
                 .projectId(project.getId())
@@ -380,7 +421,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void addProjectMember_shouldRejectDuplicateMembership() throws Exception {
         projectMemberRepository.save(com.example.demo.model.ProjectMember.builder()
                 .project(project)
@@ -402,7 +443,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void updateProjectMember_shouldPersistChanges() throws Exception {
         var savedMember = projectMemberRepository.save(com.example.demo.model.ProjectMember.builder()
                 .project(project)
@@ -426,7 +467,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void deleteProjectMember_shouldRemoveMembership() throws Exception {
         var savedMember = projectMemberRepository.save(com.example.demo.model.ProjectMember.builder()
                 .project(project)
@@ -439,7 +480,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void getDashboard_shouldReturnSummaryMetrics() throws Exception {
         taskRepository.save(Task.builder()
                 .title("Done Task")
@@ -461,7 +502,7 @@ class ApiIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = {"ADMIN"})
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
     void calculateProjectHealth_shouldReturnScores() throws Exception {
         taskRepository.save(Task.builder()
                 .title("Late Task")
@@ -482,5 +523,200 @@ class ApiIntegrationTests {
                 .andExpect(jsonPath("$.overallScore").isNumber())
                 .andExpect(jsonPath("$.delayScore").isNumber())
                 .andExpect(jsonPath("$.progressScore").value(35));
+    }
+
+    @Test
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
+    void createSprint_shouldReturnPlannedSprint() throws Exception {
+        SprintRequest request = SprintRequest.builder()
+                .name("Sprint 1")
+                .goal("Deliver project planning slice")
+                .startDate(LocalDate.of(2026, 5, 18))
+                .endDate(LocalDate.of(2026, 5, 31))
+                .capacityPoints(20)
+                .build();
+
+        mockMvc.perform(post("/api/projects/{projectId}/sprints", project.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.projectId").value(project.getId()))
+                .andExpect(jsonPath("$.name").value("Sprint 1"))
+                .andExpect(jsonPath("$.status").value("PLANNED"))
+                .andExpect(jsonPath("$.capacityPoints").value(20));
+    }
+
+    @Test
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
+    void scrumBoard_shouldExposeActiveSprintAndAssignedTasks() throws Exception {
+        Sprint sprint = sprintRepository.save(Sprint.builder()
+                .project(project)
+                .name("Sprint Board")
+                .goal("Move backlog into delivery")
+                .startDate(LocalDate.now().minusDays(1))
+                .endDate(LocalDate.now().plusDays(12))
+                .capacityPoints(13)
+                .status(SprintStatus.PLANNED)
+                .build());
+
+        Task task = taskRepository.save(Task.builder()
+                .title("Scrum task")
+                .description("Task for sprint assignment")
+                .status(TaskStatus.TODO)
+                .priority(TaskPriority.HIGH)
+                .storyPoints(5)
+                .backlogRank(1)
+                .project(project)
+                .assignee(user)
+                .build());
+
+        mockMvc.perform(put("/api/sprints/{sprintId}/start", sprint.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        mockMvc.perform(put("/api/sprints/{sprintId}/tasks/{taskId}", sprint.getId(), task.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sprintId").value(sprint.getId()))
+                .andExpect(jsonPath("$.storyPoints").value(5));
+
+        mockMvc.perform(get("/api/projects/{projectId}/scrum", project.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activeSprint.id").value(sprint.getId()))
+                .andExpect(jsonPath("$.activeSprintTasks.length()").value(1))
+                .andExpect(jsonPath("$.activeSprintTasks[0].title").value("Scrum task"))
+                .andExpect(jsonPath("$.metrics.activeCommittedPoints").value(5))
+                .andExpect(jsonPath("$.metrics.activeCapacityPoints").value(13));
+    }
+
+    @Test
+    @WithMockUser(username = "tester@example.com", roles = {"ADMIN"})
+    void updateTaskScrum_shouldPersistPlanningFields() throws Exception {
+        Task task = taskRepository.save(Task.builder()
+                .title("Estimate me")
+                .description("Task needing scrum metadata")
+                .status(TaskStatus.TODO)
+                .priority(TaskPriority.MEDIUM)
+                .project(project)
+                .assignee(user)
+                .build());
+
+        TaskScrumUpdateRequest request = TaskScrumUpdateRequest.builder()
+                .storyPoints(8)
+                .backlogRank(2)
+                .acceptanceCriteria("Done when criteria are verified")
+                .build();
+
+        mockMvc.perform(put("/api/tasks/{taskId}/scrum", task.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.storyPoints").value(8))
+                .andExpect(jsonPath("$.backlogRank").value(2))
+                .andExpect(jsonPath("$.acceptanceCriteria").value("Done when criteria are verified"));
+    }
+
+    @Test
+    @WithMockUser(username = "employee@example.com", roles = {"EMPLOYEE"})
+    void employeeViews_shouldOnlyExposeAssignedWork() throws Exception {
+        User employee = userRepository.save(User.builder()
+                .firstName("Ema")
+                .lastName("Employee")
+                .email("employee@example.com")
+                .password("encoded")
+                .role(Role.EMPLOYEE)
+                .provider(AuthProvider.LOCAL)
+                .enabled(true)
+                .build());
+
+        Project hiddenProject = projectRepository.save(Project.builder()
+                .name("Hidden Project")
+                .description("Not visible to employee")
+                .status(ProjectStatus.ACTIVE)
+                .startDate(LocalDate.of(2026, 5, 1))
+                .endDate(LocalDate.of(2026, 6, 1))
+                .progressPercentage(10)
+                .build());
+
+        projectMemberRepository.save(ProjectMember.builder()
+                .project(project)
+                .user(employee)
+                .role(ProjectMemberRole.CONTRIBUTOR)
+                .allocationPercentage(80)
+                .build());
+
+        taskRepository.save(Task.builder()
+                .title("Employee assigned task")
+                .description("Visible task")
+                .status(TaskStatus.IN_PROGRESS)
+                .priority(TaskPriority.HIGH)
+                .project(project)
+                .assignee(employee)
+                .build());
+
+        taskRepository.save(Task.builder()
+                .title("Manager-only task")
+                .description("Same project but assigned elsewhere")
+                .status(TaskStatus.TODO)
+                .priority(TaskPriority.MEDIUM)
+                .project(project)
+                .assignee(user)
+                .build());
+
+        taskRepository.save(Task.builder()
+                .title("Hidden project task")
+                .description("Different project")
+                .status(TaskStatus.TODO)
+                .priority(TaskPriority.MEDIUM)
+                .project(hiddenProject)
+                .assignee(user)
+                .build());
+
+        mockMvc.perform(get("/api/projects"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].name").value("Initial Project"));
+
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Employee assigned task"));
+
+        mockMvc.perform(get("/api/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalProjects").value(1))
+                .andExpect(jsonPath("$.totalTasks").value(1))
+                .andExpect(jsonPath("$.totalUsers").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "employee@example.com", roles = {"EMPLOYEE"})
+    void employeeWrites_shouldBeForbiddenForProjectManagement() throws Exception {
+        userRepository.save(User.builder()
+                .firstName("Ema")
+                .lastName("Employee")
+                .email("employee@example.com")
+                .password("encoded")
+                .role(Role.EMPLOYEE)
+                .provider(AuthProvider.LOCAL)
+                .enabled(true)
+                .build());
+
+        ProjectRequest request = ProjectRequest.builder()
+                .name("Employee Project")
+                .description("Should not be created")
+                .status(ProjectStatus.ACTIVE)
+                .progressPercentage(0)
+                .build();
+
+        mockMvc.perform(post("/api/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/budget"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isForbidden());
     }
 }

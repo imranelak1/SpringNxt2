@@ -39,9 +39,11 @@ public class TaskService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final CurrentUserService currentUserService;
 
     @Transactional
     public TaskResponse createTask(TaskRequest request) {
+        currentUserService.requireManagerOrAdmin();
         validateDates(request);
 
         Project project = findProject(request.getProjectId());
@@ -99,11 +101,16 @@ public class TaskService {
             int size,
             String sortBy,
             String sortDir) {
+        User currentUser = currentUserService.getCurrentUser();
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<Task> taskPage = taskRepository.findAll((root, query, criteriaBuilder) -> {
                     List<Predicate> predicates = new ArrayList<>();
+
+                    if (!currentUserService.canManage(currentUser)) {
+                        predicates.add(criteriaBuilder.equal(root.get("assignee").get("id"), currentUser.getId()));
+                    }
 
                     if (projectId != null) {
                         predicates.add(criteriaBuilder.equal(root.get("project").get("id"), projectId));
@@ -153,14 +160,21 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public TaskResponse getTaskById(Long id) {
-        return mapToResponse(findTask(id));
+        Task task = findTask(id);
+        currentUserService.requireCanViewTask(task);
+        return mapToResponse(task);
     }
 
     @Transactional
     public TaskResponse updateTask(Long id, TaskRequest request) {
+        Task task = findTask(id);
+        User currentUser = currentUserService.getCurrentUser();
+        if (!currentUserService.canManage(currentUser)) {
+            return updateEmployeeTask(task, request, currentUser);
+        }
+
         validateDates(request);
 
-        Task task = findTask(id);
         User oldAssignee = task.getAssignee();
         TaskStatus oldStatus = task.getStatus();
 
@@ -233,8 +247,27 @@ public class TaskService {
 
     @Transactional
     public void deleteTask(Long id) {
+        currentUserService.requireManagerOrAdmin();
         taskCommentRepository.deleteByTaskId(id);
         taskRepository.delete(findTask(id));
+    }
+
+    private TaskResponse updateEmployeeTask(Task task, TaskRequest request, User currentUser) {
+        currentUserService.requireCanUpdateEmployeeTask(currentUser, task);
+
+        TaskStatus oldStatus = task.getStatus();
+        TaskStatus newStatus = request.getStatus() != null ? request.getStatus() : oldStatus;
+
+        task.setStatus(newStatus);
+        task.setActualHours(request.getActualHours());
+
+        if (oldStatus != TaskStatus.DONE && newStatus == TaskStatus.DONE) {
+            task.setCompletedAt(LocalDateTime.now());
+        } else if (oldStatus == TaskStatus.DONE && newStatus != TaskStatus.DONE) {
+            task.setCompletedAt(null);
+        }
+
+        return mapToResponse(taskRepository.save(task));
     }
 
     private Task findTask(Long id) {

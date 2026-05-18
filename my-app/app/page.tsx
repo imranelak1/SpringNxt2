@@ -7,6 +7,7 @@ import Topbar from './components/Topbar';
 import Dashboard from './components/views/Dashboard';
 import Projets from './components/views/Projets';
 import Taches from './components/views/Taches';
+import MySprintView from './components/views/MySprintView';
 import Calendrier from './components/views/Calendrier';
 import Ressources from './components/views/Ressources';
 import Rapports from './components/views/Rapports';
@@ -31,6 +32,44 @@ const defaultViewsByRole: Record<AuthSession['role'], View> = {
   admin: 'dashboard',
   pm: 'dashboard',
   employee: 'dashboard',
+};
+
+const viewsByRole: Record<AuthSession['role'], View[]> = {
+  admin: [
+    'dashboard',
+    'projets',
+    'taches',
+    'gantt',
+    'calendrier',
+    'ressources',
+    'rapports',
+    'budgets',
+    'performance',
+    'notifications',
+    'parametres',
+    'utilisateurs',
+    'import-pdf',
+    'simulation',
+    'archives-ia',
+  ],
+  pm: [
+    'dashboard',
+    'projets',
+    'taches',
+    'gantt',
+    'calendrier',
+    'ressources',
+    'rapports',
+    'budgets',
+    'performance',
+    'notifications',
+    'parametres',
+    'utilisateurs',
+    'import-pdf',
+    'simulation',
+    'archives-ia',
+  ],
+  employee: ['dashboard', 'taches', 'scrum', 'calendrier', 'notifications', 'parametres', 'archives-ia'],
 };
 
 export default function Home() {
@@ -64,6 +103,7 @@ export default function Home() {
     return storedTheme === 'light' ? 'light' : 'dark';
   });
   const session = sessionOverride ?? storedSession;
+  const availableViews = session ? viewsByRole[session.role] : [];
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -75,6 +115,14 @@ export default function Home() {
     window.addEventListener(AI_ARCHIVE_NAVIGATE_EVENT, openArchives);
     return () => window.removeEventListener(AI_ARCHIVE_NAVIGATE_EVENT, openArchives);
   }, []);
+
+  useEffect(() => {
+    if (!session || availableViews.includes(activeView)) {
+      return;
+    }
+
+    setActiveView(defaultViewsByRole[session.role]);
+  }, [activeView, availableViews, session]);
 
   const handleLogin = (nextSession: AuthSession) => {
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
@@ -106,6 +154,7 @@ export default function Home() {
     ),
     projets: <Projets token={session.token} role={session.role} isActive={activeView === 'projets'} />,
     taches: <Taches token={session.token} role={session.role} />,
+    scrum: <MySprintView token={session.token} />,
     calendrier: <Calendrier token={session.token} role={session.role} />,
     ressources: <Ressources token={session.token} role={session.role} />,
     rapports: <Rapports token={session.token} />,
@@ -143,7 +192,7 @@ export default function Home() {
             onToggleTheme={handleToggleTheme}
           />
           <div className="content">
-            {(Object.keys(views) as View[]).map((view) => (
+            {availableViews.map((view) => (
               <div key={view} className={`view ${activeView === view ? 'active' : ''}`}>
                 {views[view]}
               </div>

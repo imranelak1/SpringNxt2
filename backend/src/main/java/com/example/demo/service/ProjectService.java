@@ -6,6 +6,7 @@ import com.example.demo.dto.PagedResponse;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Project;
 import com.example.demo.model.ProjectStatus;
+import com.example.demo.model.User;
 import com.example.demo.repository.ProjectMemberRepository;
 import com.example.demo.repository.ProjectRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -27,9 +28,11 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final EmailService emailService;
+    private final CurrentUserService currentUserService;
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest request) {
+        currentUserService.requireManagerOrAdmin();
         validateDates(request);
 
         Project project = Project.builder()
@@ -55,11 +58,21 @@ public class ProjectService {
             int size,
             String sortBy,
             String sortDir) {
+        User currentUser = currentUserService.getCurrentUser();
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<Project> rawPage = projectRepository.findAll((root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            if (!currentUserService.canManage(currentUser)) {
+                List<Long> visibleProjectIds = currentUserService.visibleProjectIds(currentUser);
+                if (visibleProjectIds.isEmpty()) {
+                    predicates.add(criteriaBuilder.disjunction());
+                } else {
+                    predicates.add(root.get("id").in(visibleProjectIds));
+                }
+            }
 
             if (search != null && !search.isBlank()) {
                 String searchPattern = "%" + search.toLowerCase() + "%";
@@ -93,11 +106,14 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public ProjectResponse getProjectById(Long id) {
-        return mapToResponse(findProject(id));
+        Project project = findProject(id);
+        currentUserService.requireCanViewProject(project);
+        return mapToResponse(project);
     }
 
     @Transactional
     public ProjectResponse updateProject(Long id, ProjectRequest request) {
+        currentUserService.requireManagerOrAdmin();
         validateDates(request);
 
         Project project = findProject(id);
@@ -134,6 +150,7 @@ public class ProjectService {
 
     @Transactional
     public void deleteProject(Long id) {
+        currentUserService.requireManagerOrAdmin();
         Project project = findProject(id);
         projectRepository.delete(project);
     }

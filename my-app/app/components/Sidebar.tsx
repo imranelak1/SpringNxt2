@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   LayoutDashboard,
   FolderKanban,
   ListChecks,
+  Activity,
   GanttChart,
   Calendar,
   Users,
@@ -39,6 +40,7 @@ const navSections = [
       { view: 'dashboard' as View, icon: LayoutDashboard, label: 'Tableau de bord' },
       { view: 'projets' as View, icon: FolderKanban, label: 'Projets' },
       { view: 'taches' as View, icon: ListChecks, label: 'Taches' },
+      { view: 'scrum' as View, icon: Activity, label: 'Mon sprint' },
       { view: 'gantt' as View, icon: GanttChart, label: 'Vue Gantt' },
       { view: 'calendrier' as View, icon: Calendar, label: 'Calendrier' },
     ],
@@ -70,6 +72,44 @@ const navSections = [
   },
 ];
 
+const allowedViewsByRole: Record<AppRole, View[]> = {
+  admin: [
+    'dashboard',
+    'projets',
+    'taches',
+    'gantt',
+    'calendrier',
+    'ressources',
+    'budgets',
+    'performance',
+    'rapports',
+    'simulation',
+    'import-pdf',
+    'archives-ia',
+    'utilisateurs',
+    'notifications',
+    'parametres',
+  ],
+  pm: [
+    'dashboard',
+    'projets',
+    'taches',
+    'gantt',
+    'calendrier',
+    'ressources',
+    'budgets',
+    'performance',
+    'rapports',
+    'simulation',
+    'import-pdf',
+    'archives-ia',
+    'utilisateurs',
+    'notifications',
+    'parametres',
+  ],
+  employee: ['dashboard', 'taches', 'scrum', 'calendrier', 'archives-ia', 'notifications', 'parametres'],
+};
+
 function getRoleLabel(role: AppRole) {
   if (role === 'admin') return 'Administrateur';
   if (role === 'pm') return 'Chef de Projet';
@@ -87,6 +127,16 @@ function getInitials(email: string) {
 }
 
 export default function Sidebar({ activeView, onNavigate, onLogout, role, email, firstName, lastName }: SidebarProps) {
+  const visibleSections = useMemo(() => {
+    const allowedViews = new Set(allowedViewsByRole[role]);
+    return navSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => allowedViews.has(item.view)),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [role]);
+
   const displayName = firstName && lastName ? `${firstName} ${lastName}` : email;
   const initials = firstName && lastName
     ? `${firstName[0]}${lastName[0]}`.toUpperCase()
@@ -95,7 +145,7 @@ export default function Sidebar({ activeView, onNavigate, onLogout, role, email,
   // Open the section that contains the active view; close the rest by default
   const initialOpen = () => {
     const obj: Record<string, boolean> = {};
-    navSections.forEach((s) => {
+    visibleSections.forEach((s) => {
       obj[s.label] = s.items.some((i) => i.view === activeView);
     });
     // Ensure at least General is open on first load
@@ -109,7 +159,7 @@ export default function Sidebar({ activeView, onNavigate, onLogout, role, email,
 
   // Auto-open section when navigating to one of its views
   const handleNavigate = (view: View) => {
-    const section = navSections.find((s) => s.items.some((i) => i.view === view));
+    const section = visibleSections.find((s) => s.items.some((i) => i.view === view));
     if (section && !open[section.label]) {
       setOpen((prev) => ({ ...prev, [section.label]: true }));
     }
@@ -132,7 +182,7 @@ export default function Sidebar({ activeView, onNavigate, onLogout, role, email,
         <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>&#9662;</span>
       </div>
       <nav className="nav">
-        {navSections.map((section) => {
+        {visibleSections.map((section) => {
           const isOpen = open[section.label] ?? false;
           return (
             <div className="nav-section" key={section.label} style={{ marginBottom: '4px' }}>
@@ -162,6 +212,7 @@ export default function Sidebar({ activeView, onNavigate, onLogout, role, email,
                     <div
                       key={item.view}
                       className={`nav-item ${activeView === item.view ? 'active' : ''}`}
+                      data-testid={`nav-${item.view}`}
                       onClick={() => handleNavigate(item.view)}
                     >
                       <Icon size={15} strokeWidth={1.8} className="nav-icon-svg" />

@@ -2,6 +2,7 @@ export type View =
   | 'dashboard'
   | 'projets'
   | 'taches'
+  | 'scrum'
   | 'calendrier'
   | 'ressources'
   | 'rapports'

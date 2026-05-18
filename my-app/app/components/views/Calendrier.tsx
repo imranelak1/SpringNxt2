@@ -138,15 +138,15 @@ export default function Calendrier({ token, role }: CalendrierProps) {
       setError('');
 
       try {
-        const [taskResponse, projectResponse] = await Promise.all([
+        const [taskResponse, projectResponse, calendarEventsResponse] = await Promise.all([
           getTasks(token),
-          getProjects(token),
+          role === 'employee' ? Promise.resolve(null) : getProjects(token),
+          getCalendarEvents(token).catch(() => []),
         ]);
-        const calendarEventsResponse = await getCalendarEvents(token).catch(() => []);
 
         if (isMounted) {
           setTasks(taskResponse.content);
-          setProjects(projectResponse.content);
+          setProjects(projectResponse?.content ?? []);
           setCustomEvents(calendarEventsResponse);
         }
       } catch (loadError) {

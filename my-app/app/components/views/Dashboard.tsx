@@ -186,6 +186,7 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
 
   const completionRate =
     data.totalTasks > 0 ? Math.round((data.completedTasks / data.totalTasks) * 100) : 0;
+  const isEmployee = role === 'employee';
 
   return (
     <div data-testid="dashboard-view">
@@ -193,7 +194,7 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
         <div className="stat-card sc1">
           <div className="stat-lbl">{getRoleHeadline(role)}</div>
           <div className="stat-val">{data.totalProjects}</div>
-          <div className="stat-chg up">Total projects tracked</div>
+          <div className="stat-chg up">{isEmployee ? 'Assigned projects' : 'Total projects tracked'}</div>
         </div>
         <div className="stat-card sc2">
           <div className="stat-lbl">Active projects</div>
@@ -206,9 +207,9 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
           <div className="stat-chg up">{completionRate}% completion rate</div>
         </div>
         <div className="stat-card sc4">
-          <div className="stat-lbl">Users in workspace</div>
+          <div className="stat-lbl">{isEmployee ? 'Your workspace' : 'Users in workspace'}</div>
           <div className="stat-val">{data.totalUsers}</div>
-          <div className="stat-chg down">{data.totalTasks} tasks in total</div>
+          <div className="stat-chg down">{isEmployee ? `${data.totalTasks} assigned tasks` : `${data.totalTasks} tasks in total`}</div>
         </div>
       </div>
 
@@ -217,8 +218,8 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
           <div className="card">
             <div className="card-header">
               <div className="card-title">Project health</div>
-              <span className="card-action" onClick={() => onNavigate('projets')}>
-                Open projects
+              <span className="card-action" onClick={() => onNavigate(isEmployee ? 'taches' : 'projets')}>
+                {isEmployee ? 'Open tasks' : 'Open projects'}
               </span>
             </div>
             <table className="tbl">
@@ -329,15 +330,27 @@ export default function Dashboard({ onNavigate, token, role }: DashboardProps) {
               <div className="card-title">Quick actions</div>
             </div>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button className="btn btn-ghost" onClick={() => onNavigate('projets')}>
-                View project list
-              </button>
+              {!isEmployee ? (
+                <button className="btn btn-ghost" onClick={() => onNavigate('projets')}>
+                  View project list
+                </button>
+              ) : null}
               <button className="btn btn-ghost" onClick={() => onNavigate('taches')}>
-                View task board
+                {isEmployee ? 'View my assigned tasks' : 'View task board'}
               </button>
-              <button className="btn btn-ghost" onClick={() => onNavigate('utilisateurs')}>
-                Open users view
+              {isEmployee ? (
+                <button className="btn btn-ghost" onClick={() => onNavigate('scrum')}>
+                  Open my sprint
+                </button>
+              ) : null}
+              <button className="btn btn-ghost" onClick={() => onNavigate('calendrier')}>
+                Open calendar
               </button>
+              {!isEmployee ? (
+                <button className="btn btn-ghost" onClick={() => onNavigate('utilisateurs')}>
+                  Open users view
+                </button>
+              ) : null}
             </div>
           </div>
 

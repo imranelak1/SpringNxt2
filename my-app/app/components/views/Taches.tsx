@@ -512,10 +512,11 @@ export default function Taches({ token, role }: TachesProps) {
           </select>
         </div>
 
+        {role !== 'employee' ? (
+          <>
         <button
           className="btn btn-ghost btn-sm"
           onClick={() => setShowDecomposeModal(true)}
-          disabled={role === 'employee'}
           title="Décomposer un objectif avec l'IA"
         >
           ✦ IA
@@ -523,10 +524,11 @@ export default function Taches({ token, role }: TachesProps) {
         <button
           className="btn btn-primary btn-sm"
           onClick={() => setShowTaskModal(true)}
-          disabled={role === 'employee'}
         >
           New Task
         </button>
+          </>
+        ) : null}
       </div>
 
       {viewMode === 'Kanban' ? (
